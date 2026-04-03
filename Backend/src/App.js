@@ -95,3 +95,7 @@ app.listen(PORT, () => {
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     console.log('=================================');
 });
+
+// payment-gateway
+const paymentRoutes = require('./routes/paymentRoutes');
+app.use('/api/payment', paymentRoutes);
