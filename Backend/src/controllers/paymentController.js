@@ -3,7 +3,7 @@ const paymentConfig = require('../config/payment');
 const db = require('../config/database');
 
 function generateInvoiceId() {
-    const timestamp = Date.now().toString(36).toUpperCase();
+    const timestamp = Date.now().toString(36).toUpperCase(); 
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `INV-${timestamp}-${random}`;
 }
