@@ -1,19 +1,10 @@
 const paymentConfig = {
-    // payment config
-    apiUrl: process.env.PAYMENT_API_URL || 'https://sandbox.uddoktapay.com/api/checkout-v2',
-    apiKey: process.env.PAYMENT_API_KEY || '982d381360a69d419689740d9f2e26ce36fb7a50',
-    apiSecret: process.env.PAYMENT_API_SECRET || '',
-    merchantId: process.env.PAYMENT_MERCHANT_ID || '',
-
-    // all urls
-    callbackUrl: process.env.PAYMENT_CALLBACK_URL || 'http://localhost:5000/api/payment/callback',
-    successUrl: process.env.PAYMENT_SUCCESS_URL || 'http://localhost:5173/payment/success',
-    failUrl: process.env.PAYMENT_FAIL_URL || 'http://localhost:5173/payment/fail',
-    cancelUrl: process.env.PAYMENT_CANCEL_URL || 'http://localhost:5173/payment/cancel',
-
-    currency: process.env.PAYMENT_CURRENCY || 'BDT',
-
-    sandbox: process.env.PAYMENT_SANDBOX === 'true',
+    apiUrl: process.env.UDDOKTAPAY_API_URL || 'https://sandbox.uddoktapay.com',
+    apiKey: process.env.UDDOKTAPAY_API_KEY || '',
+    redirectUrl: process.env.UDDOKTAPAY_REDIRECT_URL || 'http://localhost:5173/payment/success',
+    cancelUrl: process.env.UDDOKTAPAY_CANCEL_URL || 'http://localhost:5173/payment/cancel',
+    webhookUrl: process.env.UDDOKTAPAY_WEBHOOK_URL || 'http://localhost:5000/api/payment/webhook',
+    currency: process.env.UDDOKTAPAY_CURRENCY || 'BDT',
     timeout: 30000,
 
     isConfigured() {
