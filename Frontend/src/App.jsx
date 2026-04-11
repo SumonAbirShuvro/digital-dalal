@@ -2,10 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { isAuthenticated, getUser } from "./utils/auth";
 import { LanguageProvider } from "./Context/LanguageContext";
 
-import HomePage              from "./Components/Public/HomePage";
-import AboutPage             from "./Components/Public/AboutPage";
-import AvailableServicesPage from "./Components/Public/AvailableServicesPage";
-import ContactPage           from "./Components/Public/ContactPage";
+import HomePage from "./Components/public/HomePage";
+import AboutPage from "./Components/public/AboutPage";
+import AvailableServicesPage from "./Components/public/AvailableServicesPage";
+import ContactPage from "./Components/public/ContactPage";
+import FeedbackPage from "./Components/public/FeedbackPage";
 
 import Login            from "./Components/Auth/Login";
 import Register         from "./Components/Auth/Register";
