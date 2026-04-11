@@ -1,4 +1,4 @@
-const { verifyToken, errorResponse } = require('C:/Users/USER/Desktop/SCST/Backend/src/utils/helpers');
+const { verifyToken, errorResponse } = require('../utils/helpers');
 
 const authMiddleware = (req, res, next) => {
     try {
