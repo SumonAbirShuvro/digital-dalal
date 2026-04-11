@@ -1,4 +1,4 @@
-const { errorResponse } = require('C:/Users/USER/Desktop/SCST/Backend/src/utils/helpers');
+const { errorResponse } = require('../utils/helpers');
 
 const roleMiddleware = (...allowedRoles) => {
     return (req, res, next) => {
