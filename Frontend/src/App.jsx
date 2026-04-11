@@ -24,7 +24,7 @@ import PaymentPage               from "./Components/Dashboard/PaymentPage";
 import PaymentSuccessPage        from "./Components/Dashboard/PaymentSuccessPage";
 import PaymentCancelPage         from "./Components/Dashboard/PaymentCancelPage";
 import TrackingPage              from "./Components/Dashboard/TrackingPage";
-import FeedbackPage              from "./Components/Public/FeedbackPage";
+import FeedbackPage              from "./Components/public/FeedbackPage";
 
 const ProtectedRoute = ({ children }) =>
     isAuthenticated() ? children : <Navigate to="/login" replace />;
