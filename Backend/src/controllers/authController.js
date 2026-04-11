@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const db = require('../config/database');
 const axios = require('axios');
 
-
 // REGISTER
 const register = async (req, res) => {
     try {
@@ -18,8 +17,7 @@ const register = async (req, res) => {
             return res.status(400).json({ error: 'পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' });
         }
 
-        const allowedRoles = ['Citizen', 'Admin', 'Officer'];
-        const userRole = allowedRoles.includes(role) ? role.toLowerCase() : 'citizen';
+        const userRole = 'citizen';
 
         const [existingUsers] = await db.query(
             'SELECT * FROM users WHERE mobile = ?', [mobile]
@@ -70,7 +68,6 @@ const register = async (req, res) => {
     }
 };
 
-
 // SEND OTP
 const sendOTP = async (req, res) => {
     try {
@@ -92,14 +89,14 @@ const sendOTP = async (req, res) => {
             return res.status(404).json({ error: 'User পাওয়া যায়নি' });
         }
 
-        console.log(`✅ OTP saved to DB: ${otp} for userId: ${userId}`);
+        console.log(` OTP saved to DB: ${otp} for userId: ${userId}`);
 
-        // ── BD BULK SMS ──────────────────────────────────────────
+        //BD BULK SMS 
         try {
             const apiToken = process.env.BDBULK_API_TOKEN;
 
             if (!apiToken) {
-                console.error('❌ BDBULK_API_TOKEN is missing in .env!');
+                console.error(' BDBULK_API_TOKEN is missing in .env!');
                 throw new Error('SMS API token not configured');
             }
 
@@ -109,16 +106,16 @@ const sendOTP = async (req, res) => {
             }
 
             const message = `Smart Citizen Portal OTP Code: ${otp}। এই কোড ১০ মিনিট পর্যন্ত বৈধ।`;
-            const smsUrl = `http://api.bdbulksms.net/api.php?token=${apiToken}&to=${formattedContact}&message=${encodeURIComponent(message)}`;
+            const smsUrl = `https://bulksmsbd.net/api/smsapi?api_key=${apiToken}&type=text&number=${formattedContact}&senderid=8809648906678&message=${encodeURIComponent(message)}`;
 
-            console.log(`📤 Sending SMS to: ${formattedContact}`);
+            console.log(` Sending SMS to: ${formattedContact}`);
             const smsResponse = await axios.get(smsUrl, { timeout: 10000 });
             console.log(`📱 SMS Response:`, smsResponse.data);
 
         } catch (smsError) {
-            console.error('❌ SMS send failed:', smsError.message);
+            console.error(' SMS send failed:', smsError.message);
         }
-        // ── END BD BULK SMS ──────────────────────────────────────
+        //  END BD BULK SMS
 
         await db.query(
             `INSERT INTO audit_logs (user_id, action, details) VALUES (?, 'otp_sent', ?)`,
@@ -136,7 +133,6 @@ const sendOTP = async (req, res) => {
         res.status(500).json({ error: 'OTP পাঠাতে ব্যর্থ হয়েছে' });
     }
 };
-
 
 // VERIFY OTP
 const verifyOTP = async (req, res) => {
@@ -180,9 +176,8 @@ const verifyOTP = async (req, res) => {
     }
 };
 
-
 // LOGIN
-// ✅ After login, frontend uses JWT token's role to redirect to correct dashboard
+
 const login = async (req, res) => {
     try {
         const { mobile, password } = req.body;
@@ -225,7 +220,7 @@ const login = async (req, res) => {
                 name: user.name,
                 mobile: user.mobile,
                 email: user.email,
-                role: user.role,          // ✅ role returned — use this for dashboard redirect
+                role: user.role,                      // role returned — use this for dashboard redirect
                 isVerified: user.is_verified,
                 token: token
             }
@@ -236,7 +231,6 @@ const login = async (req, res) => {
         res.status(500).json({ error: 'লগইন ব্যর্থ হয়েছে' });
     }
 };
-
 
 // GET CURRENT USER
 const getMe = async (req, res) => {
@@ -259,7 +253,6 @@ const getMe = async (req, res) => {
         res.status(500).json({ error: 'ইউজার তথ্য আনতে ব্যর্থ হয়েছে' });
     }
 };
-
 
 // UPDATE PROFILE
 const updateProfile = async (req, res) => {
@@ -285,7 +278,6 @@ const updateProfile = async (req, res) => {
     }
 };
 
-
 // LOGOUT
 const logout = async (req, res) => {
     try {
@@ -303,6 +295,5 @@ const logout = async (req, res) => {
         res.status(500).json({ error: 'লগআউট ব্যর্থ হয়েছে' });
     }
 };
-
 
 module.exports = { register, sendOTP, verifyOTP, login, getMe, updateProfile, logout };
