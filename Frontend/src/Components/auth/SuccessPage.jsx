@@ -9,9 +9,9 @@ const SuccessPage = () => {
 
     const getDashboardPath = (r) => {
         switch (r) {
-            case 'Admin':   return '/admin/dashboard';
-            case 'Officer': return '/officer/dashboard';
-            default:        return '/citizen/dashboard';
+            case 'Admin':          return '/admin/dashboard';
+            case 'Review_Handler': return '/review-handler/dashboard';
+            default:          return '/dashboard';
         }
     };
 
@@ -22,9 +22,9 @@ const SuccessPage = () => {
     };
 
     const roleLabel = {
-        Citizen: { icon: '👤', color: '#0f766e', text: 'Citizen' },
-        Admin:   { icon: '🛡️', color: '#1d4ed8', text: 'Admin'   },
-        Officer: { icon: '👮', color: '#7c3aed', text: 'Officer'  }
+        Citizen:        { icon: '👤', color: '#0f766e', text: 'Citizen'        },
+        Admin:          { icon: '🛡️', color: '#1d4ed8', text: 'Admin'          },
+        Review_Handler: { icon: '🔍', color: '#7c3aed', text: 'Review Handler' }
     };
 
     const currentRole = role ? roleLabel[role] : null;
