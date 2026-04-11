@@ -9,9 +9,8 @@ const {
     getMe, 
     updateProfile, 
     logout
-} = require('C:/Users/USER/Desktop/SCST/Backend/src/Controllers/authController.js');
-const authMiddleware = require('C:/Users/USER/Desktop/SCST/Backend/src/middleware/authMiddleware');
-
+} = require('../Controllers/authController');  
+const authMiddleware = require('../middleware/authMiddleware');  
 
 // Register
 router.post('/register', register);
