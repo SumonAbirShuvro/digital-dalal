@@ -7,13 +7,12 @@ const VerificationCode = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Receive role and redirectTo from OTPVerification
     const { contact, userId, role, redirectTo } = location.state || {};
 
-    const [otp, setOtp] = useState(['', '', '', '']);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [timer, setTimer] = useState(30);
+    const [otp, setOtp]             = useState(['', '', '', '']);
+    const [error, setError]         = useState('');
+    const [loading, setLoading]     = useState(false);
+    const [timer, setTimer]         = useState(30);
     const [canResend, setCanResend] = useState(false);
 
     const inputRefs = [useRef(), useRef(), useRef(), useRef()];
@@ -24,24 +23,22 @@ const VerificationCode = () => {
             console.log('✅ OTP sent to:', contact);
         } catch (err) {
             console.error('❌ OTP Send Error:', err);
-            setError('OTP পাঠাতে সমস্যা হয়েছে, আবার চেষ্টা করুন');
+            setError('OTP পাঠাতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
         }
     };
 
     useEffect(() => {
+
+        // OTPVerification.jsx ইতিমধ্যে OTP পাঠিয়েছে
         if (!userId || !contact) {
             navigate('/register');
-            return;
         }
-        sendOTP();
-    }, [userId]);
+    }, [userId, contact, navigate]);
 
-    // 30 sec countdown timer
+    // 30 sec countdown
     useEffect(() => {
         if (timer > 0) {
-            const interval = setInterval(() => {
-                setTimer((prev) => prev - 1);
-            }, 1000);
+            const interval = setInterval(() => setTimer(p => p - 1), 1000);
             return () => clearInterval(interval);
         } else {
             setCanResend(true);
@@ -50,47 +47,32 @@ const VerificationCode = () => {
 
     const handleChange = (index, value) => {
         if (!/^\d*$/.test(value)) return;
-
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
-
-        if (value && index < 3) {
-            inputRefs[index + 1].current.focus();
-        }
+        if (value && index < 3) inputRefs[index + 1].current.focus();
     };
 
     const handleKeyDown = (index, e) => {
-        if (e.key === 'Backspace' && !otp[index] && index > 0) {
+        if (e.key === 'Backspace' && !otp[index] && index > 0)
             inputRefs[index - 1].current.focus();
-        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         const code = otp.join('');
-        if (code.length !== 4) {
-            setError('৪ সংখ্যার কোড দিন');
-            return;
-        }
+        if (code.length !== 4) { setError('৪ সংখ্যার কোড দিন'); return; }
 
         setLoading(true);
         setError('');
 
         try {
             const response = await authAPI.verifyOTP({ userId, otp: code });
-
             if (response) {
-                // Pass role and redirectTo to SuccessPage
                 navigate('/success', {
-                    state: {
-                        role:       role,
-                        redirectTo: redirectTo
-                    }
+                    state: { role, redirectTo }
                 });
             }
-
         } catch (err) {
             console.error('Verify error:', err);
             setError('কোড ভুল অথবা মেয়াদ শেষ হয়ে গেছে');
@@ -119,7 +101,7 @@ const VerificationCode = () => {
                 </p>
 
                 {error && (
-                    <div className="error-message">
+                    <div className="error-message" style={{ marginBottom: 12 }}>
                         ⚠️ {error}
                     </div>
                 )}
