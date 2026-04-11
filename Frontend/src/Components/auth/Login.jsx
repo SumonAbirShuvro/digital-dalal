@@ -45,11 +45,18 @@ const Login = () => {
     const t = translations[language];
 
     const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        setFormData({ ...formData, [e.target.name]: e.target.value });
         setError('');
+    };
+
+    // Backend returns role as lowercase: 'citizen' | 'officer' | 'admin'
+    const getDashboardByRole = (role) => {
+        switch (role) {
+            case 'review_handler': return '/review-handler/dashboard';
+            case 'admin':   return '/admin/dashboard';
+            case 'citizen':
+            default:        return '/dashboard';
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -59,29 +66,23 @@ const Login = () => {
 
         try {
             const response = await authAPI.login(formData);
-            
+
             if (response.success) {
                 saveToken(response.data.token);
                 saveUser(response.data);
-                
+
                 console.log('✅ Login successful:', response.data);
-                
-                // Role অনুযায়ী redirect
-                const role = response.data.role;
-                
-                if (role === 'citizen') {
-                    navigate('/dashboard');
-                } else if (role === 'officer') {
-                    navigate('/officer/dashboard');
-                } else if (role === 'admin') {
-                    navigate('/admin/dashboard');
-                } else {
-                    navigate('/dashboard');
-                }
+                console.log('🔑 Role:', response.data.role);
+
+                const role = (response.data.role || 'citizen').toLowerCase();
+                navigate(getDashboardByRole(role));
             }
         } catch (err) {
             console.error('❌ Login error:', err);
-            setError(err.response?.data?.error || (language === 'bn' ? 'লগইন ব্যর্থ হয়েছে' : 'Login failed'));
+            setError(
+                err.response?.data?.error ||
+                (language === 'bn' ? 'লগইন ব্যর্থ হয়েছে' : 'Login failed')
+            );
         } finally {
             setLoading(false);
         }
@@ -91,13 +92,13 @@ const Login = () => {
         <>
             {/* Language Selector */}
             <div className="language-selector">
-                <button 
+                <button
                     className={language === 'bn' ? 'active' : ''}
                     onClick={() => setLanguage('bn')}
                 >
                     বাংলা
                 </button>
-                <button 
+                <button
                     className={language === 'en' ? 'active' : ''}
                     onClick={() => setLanguage('en')}
                 >
@@ -163,8 +164,8 @@ const Login = () => {
                             />
                         </div>
 
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="btn-primary"
                             disabled={loading}
                         >
@@ -183,14 +184,17 @@ const Login = () => {
                                 <strong>{t.register}</strong>
                             </Link>
                         </p>
+                        <p style={{ marginTop: 8 }}>
+                            <Link to="/home" style={{ fontSize: 13, color: '#6b7280' }}>
+                                ← {language === 'bn' ? 'হোমপেজে ফিরুন' : 'Back to Home'}
+                            </Link>
+                        </p>
                     </div>
                 </div>
             </div>
 
             {/* Help Button */}
-            <button className="help-button">
-                ?
-            </button>
+            <button className="help-button">?</button>
         </>
     );
 };
