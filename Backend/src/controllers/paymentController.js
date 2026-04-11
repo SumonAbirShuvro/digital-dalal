@@ -23,7 +23,8 @@ const initiatePayment = async (req, res) => {
             customerName,
             customerMobile,
             customerEmail,
-            userId
+            userId,
+            appId       
         } = req.body;
 
         if (!amount || !customerName || !customerMobile) {
@@ -70,6 +71,10 @@ const initiatePayment = async (req, res) => {
             }
         );
 
+        
+        console.log('Status:', gatewayResponse.status);
+        console.log('Data:', JSON.stringify(gatewayResponse.data, null, 2));
+
         if (gatewayResponse.data.status !== true || !gatewayResponse.data.payment_url) {
             return res.status(502).json({
                 success: false,
@@ -80,11 +85,12 @@ const initiatePayment = async (req, res) => {
 
         await db.query(
             `INSERT INTO payments 
-                (invoice_id, user_id, amount, currency, service_name, 
+                (app_id, invoice_id, user_id, amount, currency, service_name, 
                  customer_name, customer_mobile, customer_email, 
-                 status, gateway_response, created_at) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW())`,
+                 payment_status, gateway_response, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW())`,
             [
+                appId || null,
                 invoiceId,
                 userId || null,
                 parseFloat(amount),
@@ -111,7 +117,10 @@ const initiatePayment = async (req, res) => {
     } catch (error) {
         console.error('Initiate payment error:', error.message);
         if (error.response) {
-            console.error('Gateway responded with:', error.response.status, error.response.data);
+            console.error('HTTP Status:', error.response.status);
+            console.error('Response:', JSON.stringify(error.response.data, null, 2));
+            console.error('Request URL:', error.config?.url);
+            console.error('Request Body:', error.config?.data);
         }
         res.status(500).json({
             success: false,
@@ -145,13 +154,13 @@ const verifyPayment = async (req, res) => {
 
         const payment = payments[0];
 
-        if (payment.status === 'paid') {
+        if (payment.payment_status === 'paid') {
             return res.json({
                 success: true,
                 message: 'Payment already verified.',
                 data: {
                     invoiceId: payment.invoice_id,
-                    status: payment.status,
+                    status: payment.payment_status,
                     amount: payment.amount,
                     verifiedAt: payment.verified_at
                 }
@@ -176,7 +185,7 @@ const verifyPayment = async (req, res) => {
         if (verificationData.status === true || verificationData.payment_status === 'Completed' || verificationData.payment_status === 'completed') {
             await db.query(
                 `UPDATE payments 
-                 SET status = 'paid', 
+                 SET payment_status = 'paid', 
                      verified_at = NOW(), 
                      gateway_response = ? 
                  WHERE invoice_id = ?`,
@@ -206,7 +215,7 @@ const verifyPayment = async (req, res) => {
             success: true,
             data: {
                 invoiceId: updated[0].invoice_id,
-                status: updated[0].status,
+                status: updated[0].payment_status,
                 amount: updated[0].amount,
                 currency: updated[0].currency,
                 serviceName: updated[0].service_name,
@@ -262,10 +271,10 @@ const handleWebhook = async (req, res) => {
             newStatus = 'failed';
         }
 
-        if (payment.status !== newStatus) {
+        if (payment.payment_status !== newStatus) {
             await db.query(
                 `UPDATE payments 
-                 SET status = ?, 
+                 SET payment_status = ?, 
                      gateway_response = ?,
                      verified_at = CASE WHEN ? = 'paid' THEN NOW() ELSE verified_at END
                  WHERE invoice_id = ?`,
@@ -308,7 +317,7 @@ const getPaymentStatus = async (req, res) => {
         }
 
         const [payments] = await db.query(
-            'SELECT invoice_id, amount, currency, service_name, status, created_at, verified_at FROM payments WHERE invoice_id = ?',
+            'SELECT invoice_id, amount, currency, service_name, payment_status, created_at, verified_at FROM payments WHERE invoice_id = ?',
             [invoiceId]
         );
 
@@ -341,7 +350,7 @@ const getPaymentHistory = async (req, res) => {
         const offset = (page - 1) * limit;
 
         const [payments] = await db.query(
-            `SELECT invoice_id, amount, currency, service_name, status, created_at, verified_at 
+            `SELECT invoice_id, amount, currency, service_name, payment_status, created_at, verified_at 
              FROM payments 
              WHERE user_id = ? 
              ORDER BY created_at DESC 
