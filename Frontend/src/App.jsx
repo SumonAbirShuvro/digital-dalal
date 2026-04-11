@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { isAuthenticated, getUser } from "./utils/auth";
-import { LanguageProvider } from "./context/LanguageContext";
+import { LanguageProvider } from "./Context/LanguageContext";
 
 import HomePage              from "./Components/Public/HomePage";
 import AboutPage             from "./Components/Public/AboutPage";
