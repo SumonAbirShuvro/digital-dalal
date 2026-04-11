@@ -58,15 +58,15 @@ const Register = () => {
     const t = translations[language];
 
     const roles = [
-        { value: 'Citizen', label: 'Citizen', icon: '👤' },
-        { value: 'Admin',   label: 'Admin',   icon: '🛡️' },
-        { value: 'Officer', label: 'Officer', icon: '👮' }
+        { value: 'Citizen',        label: 'Citizen',        icon: '👤' },
+        { value: 'Admin',          label: 'Admin',          icon: '🛡️' },
+        { value: 'Review_Handler', label: 'Review Handler',  icon: '🔍' }
     ];
 
     const getDashboardPath = (role) => {
         switch (role) {
-            case 'Admin':   return '/admin/dashboard';
-            case 'Officer': return '/officer/dashboard';
+            case 'Admin':          return '/admin/dashboard';
+            case 'Review_Handler': return '/review-handler/dashboard';
             default:        return '/citizen/dashboard';
         }
     };
@@ -307,6 +307,11 @@ const Register = () => {
                             {t.haveAccount}{' '}
                             <Link to="/login">
                                 <strong>{t.login}</strong>
+                            </Link>
+                        </p>
+                        <p style={{ marginTop: 8 }}>
+                            <Link to="/home" style={{ fontSize: 13, color: '#6b7280' }}>
+                                ← {language === 'bn' ? 'হোমপেজে ফিরুন' : 'Back to Home'}
                             </Link>
                         </p>
                     </div>
