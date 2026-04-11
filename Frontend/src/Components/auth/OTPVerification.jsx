@@ -59,10 +59,10 @@ const OTPVerification = () => {
 
     const getDashboardPath = (r) => {
         switch (r) {
-            case 'Admin':   return '/admin/dashboard';
-            case 'Officer': return '/officer/dashboard';
+            case 'Admin':          return '/admin/dashboard';
+            case 'Review_Handler': return '/review-handler/dashboard';
             case 'Citizen':
-            default:        return '/citizen/dashboard';
+            default:          return '/dashboard';
         }
     };
 
@@ -110,9 +110,9 @@ const OTPVerification = () => {
                 {/* Role Badge */}
                 {role && (
                     <div className="role-badge">
-                        {role === 'Citizen' && '👤'}
-                        {role === 'Admin' && '🛡️'}
-                        {role === 'Officer' && '👮'}
+                        {role === 'Citizen'        && '👤'}
+                        {role === 'Admin'           && '🛡️'}
+                        {role === 'Review_Handler'  && '🔍'}
                         {' '}{role}
                     </div>
                 )}
