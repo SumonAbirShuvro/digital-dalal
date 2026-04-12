@@ -132,7 +132,7 @@ const CitizenDashboard = () => {
     const fetchDashboardData = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await api.get('/citizen/applications');
+            const response = await api.get('/applications/my');
 
             //  API response format            
             const payload = response?.data;
