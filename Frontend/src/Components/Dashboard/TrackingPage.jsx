@@ -152,12 +152,12 @@ const TrackingPage = () => {
                 // Try fetching single application first
                 let found = null;
                 try {
-                    const res = await api.get(`/citizen/applications/${id}`);
+                    const res = await api.get(`/applications/${id}`);
                     const p   = res?.data;
                     found = p?.data ?? p?.application ?? p;
                 } catch {
                     // fallback — fetch all and find by id
-                    const res  = await api.get('/citizen/applications');
+                    const res  = await api.get('/applications/my');
                     const payload = res?.data;
                     const all =
                         Array.isArray(payload)               ? payload :
