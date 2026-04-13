@@ -4,9 +4,7 @@ import api from '../../services/api';
 import { useLanguage } from '../../context/LanguageContext';
 import { getUser } from '../../utils/auth';
 
-/* ─────────────────────────────────────────
-   SHARED STYLES
-───────────────────────────────────────── */
+/*    SHARED STYLES*/ 
 const inputSt = {
     width: '100%', padding: '11px 14px',
     border: '1.5px solid #e5e7eb', borderRadius: 8,
@@ -25,14 +23,11 @@ const Field = ({ label, required, error, half, children }) => (
     </div>
 );
 
-/* ─────────────────────────────────────────
-   SUGGEST INPUT — আগের value dropdown দেখাবে
-───────────────────────────────────────── */
+
 const SuggestInput = ({ value, onChange, placeholder, style, suggestions = [], error }) => {
     const [open, setOpen] = useState(false);
     const ref = useRef();
 
-    // outside click বন্ধ করবে
     useEffect(() => {
         const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
         document.addEventListener('mousedown', handler);
@@ -78,9 +73,8 @@ const SuggestInput = ({ value, onChange, placeholder, style, suggestions = [], e
     );
 };
 
-/* ─────────────────────────────────────────
-   STEP INDICATOR
-───────────────────────────────────────── */
+
+/*    STEP INDICATOR */
 const StepBar = ({ current, steps }) => (
     <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32 }}>
         {steps.map((s, i) => {
@@ -111,9 +105,7 @@ const InfoRow = ({ label, value }) => (
     </div>
 );
 
-/* ─────────────────────────────────────────
-   PAGE HEADER
-───────────────────────────────────────── */
+/*   PAGE HEADER */
 const PageHeader = ({ b, c }) => {
     const navigate          = useNavigate();
     const user              = getUser();
@@ -172,9 +164,7 @@ const PageHeader = ({ b, c }) => {
     );
 };
 
-/* ─────────────────────────────────────────
-   MAIN PAGE
-───────────────────────────────────────── */
+/*    MAIN PAGE */
 const BirthCertificateApplyPage = () => {
     const navigate = useNavigate();
     const fileRef  = useRef();
@@ -185,35 +175,34 @@ const BirthCertificateApplyPage = () => {
 
     const [step, setStep]               = useState(1);
     const [autoFilled, setAutoFilled]   = useState(false);
-    const [prevData, setPrevData]         = useState([]);
+    const [prevData, setPrevData]         = useState([]);   
     const [busy, setBusy]               = useState(false);
     const [files, setFiles]             = useState([]);
     const [trackingId, setTrackingId]   = useState('');
-    const [appId, setAppId]             = useState('');
+    const [appId, setAppId]             = useState('');   
     const [submitError, setSubmitError] = useState('');
 
-    
+   
     const [form, setForm] = useState({
-        child_name_bn:     '',
-        child_name_en:     '',
-        father_name_bn:    '',
-        mother_name_bn:    '',
-        birth_date:        '',
-        gender:            '',
-        birth_place:       '',
-        district:          '',   // birth_place এর সাথে combine হবে
-        present_address:   '',   // permanent_address-এর fallback
-        permanent_address: '',
-        father_name_en:    '',
-        father_nationality:'',
-        mother_name_en:    '',
-        mother_nationality:'',
+        child_name_bn:     '',   
+        child_name_en:     '',   
+        father_name_bn:    '',   
+        mother_name_bn:    '',  
+        birth_date:        '',   
+        gender:            '',  
+        birth_place:       '',  
+        district:          '',   
+        present_address:   '',   
+        permanent_address: '',   
+        father_name_en:    '',   
+        father_nationality:'',  
+        mother_name_en:    '',   
+        mother_nationality:'',  
     });
 
     const [err, setErr] = useState({});
     const set = (k, v) => { setForm(p => ({ ...p, [k]: v })); setErr(p => ({ ...p, [k]: '' })); };
 
-    
     useEffect(() => {
         const loadPrevious = async () => {
             try {
@@ -222,7 +211,7 @@ const BirthCertificateApplyPage = () => {
                 const list = Array.isArray(raw) ? raw : [];
                 setPrevData(list);
             } catch {
-                // silent fail
+               
             }
         };
         loadPrevious();
@@ -233,7 +222,9 @@ const BirthCertificateApplyPage = () => {
         const e = {};
         if (!form.child_name_bn.trim())   e.child_name_bn   = b.err_nameBn;
         if (!form.father_name_bn.trim())  e.father_name_bn  = b.err_fatherName;
+        if (!form.father_name_en.trim())  e.father_name_en  = b.err_fatherNameEn ?? "Father's name (English) is required";
         if (!form.mother_name_bn.trim())  e.mother_name_bn  = b.err_motherName;
+        if (!form.mother_name_en.trim())  e.mother_name_en  = b.err_motherNameEn ?? "Mother's name (English) is required";
         if (!form.birth_date)             e.birth_date      = b.err_dob;
         if (!form.gender)                 e.gender          = b.err_gender;
         if (!form.birth_place.trim())     e.birth_place     = b.err_birthPlace;
@@ -247,7 +238,6 @@ const BirthCertificateApplyPage = () => {
     const handleFiles = e => setFiles(prev => [...prev, ...Array.from(e.target.files)]);
     const removeFile  = i => setFiles(prev => prev.filter((_, idx) => idx !== i));
 
-    
     const handleSubmit = async () => {
         setBusy(true);
         setSubmitError('');
@@ -265,13 +255,13 @@ const BirthCertificateApplyPage = () => {
             fd.append('father_nationality', form.father_nationality.trim());
             fd.append('mother_name_en',     form.mother_name_en.trim());
             fd.append('mother_nationality', form.mother_nationality.trim());
-
+           
             fd.append('permanent_address', form.permanent_address.trim() || form.present_address.trim());
             fd.append('fee_amount',        '100');
-
-            // Documents — documents table-এ যাবে backend-এ
+          
             files.forEach(f => fd.append('documents', f));
 
+            
             const response = await api.post('/applications', fd, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
@@ -293,7 +283,7 @@ const BirthCertificateApplyPage = () => {
         }
     };
 
-    /* ══════ SUCCESS SCREEN ══════ */
+    /*SUCCESS SCREEN */
     if (step === 4) return (
         <div style={{ fontFamily: "'Segoe UI',system-ui,sans-serif", background: '#f4f6f4', minHeight: '100vh' }}>
             <PageHeader b={b} c={c} />
@@ -311,7 +301,7 @@ const BirthCertificateApplyPage = () => {
                         <InfoRow label={b.lbl_processing}  value={b.lbl_processingVal} />
                     </div>
 
-                    {/* ✅ দুটো বাটন: Dashboard + Pay Now */}
+                    {/*  Dashboard + Pay Now */}
                     <div style={{ display: 'flex', gap: 12 }}>
                         <button
                             onClick={() => navigate('/dashboard')}
@@ -361,11 +351,13 @@ const BirthCertificateApplyPage = () => {
             <div style={{ maxWidth: 780, margin: '0 auto', padding: '36px 24px' }}>
                 <StepBar current={step} steps={b.steps ?? ['তথ্য পূরণ', 'নথিপত্র আপলোড', 'নিশ্চিত করুন']} />
 
-                
+                {/* ════ STEP 1 ════ */}
                 {step === 1 && (
                     <div style={{ background: 'white', borderRadius: 16, padding: '32px 36px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 4 }}>{b.step1Title}</div>
                         <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 28 }}>{b.step1Sub}</div>
+
+
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
 
@@ -416,16 +408,16 @@ const BirthCertificateApplyPage = () => {
                                     suggestions={[...new Set(prevData.map(a => a.permanent_address).filter(Boolean))]} />
                             </Field>
 
-                            <Field label={b.fatherNameEn ?? "পিতার নাম (ইংরেজি)"} half>
-                                <input value={form.father_name_en} onChange={e => set('father_name_en', e.target.value)} placeholder={b.ph_fatherNameEn ?? "Father's full name"} style={inputSt} />
+                            <Field label={b.fatherNameEn ?? "পিতার নাম (ইংরেজি)"} required half error={err.father_name_en}>
+                                <input value={form.father_name_en} onChange={e => set('father_name_en', e.target.value)} placeholder={b.ph_fatherNameEn ?? "Father's full name"} style={{ ...inputSt, borderColor: err.father_name_en ? '#EF4444' : '#e5e7eb' }} />
                             </Field>
 
                             <Field label={b.fatherNationality ?? "পিতার জাতীয়তা"} half>
                                 <input value={form.father_nationality} onChange={e => set('father_nationality', e.target.value)} placeholder={b.ph_fatherNationality ?? "যেমন: বাংলাদেশি"} style={inputSt} />
                             </Field>
 
-                            <Field label={b.motherNameEn ?? "মাতার নাম (ইংরেজি)"} half>
-                                <input value={form.mother_name_en} onChange={e => set('mother_name_en', e.target.value)} placeholder={b.ph_motherNameEn ?? "Mother's full name"} style={inputSt} />
+                            <Field label={b.motherNameEn ?? "মাতার নাম (ইংরেজি)"} required half error={err.mother_name_en}>
+                                <input value={form.mother_name_en} onChange={e => set('mother_name_en', e.target.value)} placeholder={b.ph_motherNameEn ?? "Mother's full name"} style={{ ...inputSt, borderColor: err.mother_name_en ? '#EF4444' : '#e5e7eb' }} />
                             </Field>
 
                             <Field label={b.motherNationality ?? "মাতার জাতীয়তা"} half>
@@ -443,7 +435,7 @@ const BirthCertificateApplyPage = () => {
                     </div>
                 )}
 
-                
+                {/* ════ STEP 2 ════ */}
                 {step === 2 && (
                     <div style={{ background: 'white', borderRadius: 16, padding: '32px 36px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 4 }}>{b.step2Title}</div>
@@ -503,7 +495,7 @@ const BirthCertificateApplyPage = () => {
                     </div>
                 )}
 
-                
+                {/* ════ STEP 3 ════ */}
                 {step === 3 && (
                     <div style={{ background: 'white', borderRadius: 16, padding: '32px 36px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontWeight: 700, fontSize: 18, color: '#111827', marginBottom: 4 }}>{b.step3Title}</div>
@@ -517,9 +509,9 @@ const BirthCertificateApplyPage = () => {
                             <InfoRow label={b.confirm_gender}     value={form.gender === 'male' ? b.genderMale : form.gender === 'female' ? b.genderFemale : b.genderOther} />
                             <InfoRow label={b.confirm_birthPlace} value={`${form.birth_place}, ${form.district}`} />
                             <InfoRow label={b.confirm_address}    value={form.permanent_address || form.present_address} />
-                            {form.father_name_en     && <InfoRow label={b.fatherNameEn      ?? "পিতার নাম (ইংরেজি)"}  value={form.father_name_en} />}
+                            <InfoRow label={b.fatherNameEn ?? "পিতার নাম (ইংরেজি)"}  value={form.father_name_en} />
                             {form.father_nationality && <InfoRow label={b.fatherNationality ?? "পিতার জাতীয়তা"}      value={form.father_nationality} />}
-                            {form.mother_name_en     && <InfoRow label={b.motherNameEn      ?? "মাতার নাম (ইংরেজি)"}  value={form.mother_name_en} />}
+                            <InfoRow label={b.motherNameEn ?? "মাতার নাম (ইংরেজি)"}  value={form.mother_name_en} />
                             {form.mother_nationality && <InfoRow label={b.motherNationality ?? "মাতার জাতীয়তা"}      value={form.mother_nationality} />}
                         </div>
 
