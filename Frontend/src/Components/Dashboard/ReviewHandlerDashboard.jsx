@@ -73,7 +73,7 @@ export default function ReviewHandlerDashboard() {
             case "pending":   return apps.filter(a => a.status === "pending");
             case "overdue":   return [];
             case "completed": return apps.filter(a => a.status === "completed");
-            default:          return apps; // incoming = all
+            default:          return apps; 
         }
     };
 
@@ -96,7 +96,7 @@ export default function ReviewHandlerDashboard() {
                 status: "processing",
                 remarks: "Review Handler কর্তৃক অনুমোদিত"
             });
-            // list থেকে সরাও
+           
             setAllApplications(prev => prev.filter(a => a.app_id !== approveModal.app_id));
             setApproveSuccess(true);
             setTimeout(() => { setApproveModal(null); setApproveSuccess(false); setApproveSending(false); }, 2500);
@@ -159,7 +159,6 @@ export default function ReviewHandlerDashboard() {
         { key: "completed", label: d.completed,           value: stats.completed, color: "#16a34a", barColor: "#22c55e" },
     ];
 
-    const expectedDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString("en-GB");
 
     return (
         <div style={s.root}>
@@ -217,7 +216,7 @@ export default function ReviewHandlerDashboard() {
 
             <main style={s.main}>
 
-                {/* ✅ Stat Cards — Filter buttons */}
+               
                 <div style={s.cardRow}>
                     {statCards.map(card => (
                         <div
@@ -327,7 +326,7 @@ export default function ReviewHandlerDashboard() {
                             const citizenName = app.child_name_en||app.child_name_bn||"—";
                             return (
                                 <div key={app.app_id} style={s.tRow}>
-                                    {/* ✅ Title সবসময় Birth Certificate Application */}
+                                   
                                     <span style={{ ...s.td,flex:2.4,fontWeight:500,color:"#111" }}>
                                         Birth Certificate Application
                                     </span>
@@ -340,12 +339,12 @@ export default function ReviewHandlerDashboard() {
                                     <span style={{ ...s.td,flex:1.6,color:"#555",fontSize:13 }}>{app.tracking_id??"—"}</span>
                                     <span style={{ ...s.td,flex:0.8,color:"#666",fontSize:13 }}>{dateStr}</span>
                                     <span style={{ ...s.td,flex:2,gap:10,justifyContent:"flex-end" }}>
-                                        {/* ✅ Review Request → review page navigate */}
+                                        {/*  Review Request → review page navigate */}
                                         <button style={s.reviewBtn}
                                             onClick={()=>navigate(`/review-handler/review/${app.app_id}`,{state:{app}})}>
                                             {d.reviewRequest}
                                         </button>
-                                        {/* ✅ Approve → modal */}
+                                        {/*  Approve → modal */}
                                         <button style={s.approveBtn}
                                             onClick={()=>{ setApproveModal(app); setApproveSuccess(false); }}>
                                             {d.approve}
@@ -358,7 +357,7 @@ export default function ReviewHandlerDashboard() {
                 </div>
             </main>
 
-            {/* ✅ Approve Modal — SMS preview + confirm */}
+            {/* Approve Modal */}
             {approveModal && (
                 <div style={s.overlay} onClick={e=>e.target===e.currentTarget&&!approveSending&&setApproveModal(null)}>
                     <div style={{ ...s.modal,maxWidth:480 }}>
@@ -366,7 +365,7 @@ export default function ReviewHandlerDashboard() {
                             <div style={s.successBox}>
                                 <div style={{ fontSize:48 }}>✅</div>
                                 <p style={{ margin:"14px 0 4px",fontWeight:700,fontSize:17,color:"#15803d" }}>অনুমোদন সফল হয়েছে!</p>
-                                <p style={{ fontSize:13,color:"#6b7280" }}>Citizen-এর ফোনে SMS পাঠানো হয়েছে</p>
+                                <p style={{ fontSize:13,color:"#6b7280" }}>Citizen-এর notification-এ জানানো হয়েছে</p>
                             </div>
                         ) : (
                             <>
@@ -385,24 +384,15 @@ export default function ReviewHandlerDashboard() {
                                         <div style={{ fontSize:13,color:"#555",marginTop:4 }}>Service: <strong>Birth Certificate Application</strong></div>
                                     </div>
 
-                                    {/* SMS preview */}
-                                    <div style={{ background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:10,padding:"14px 16px",marginBottom:20 }}>
-                                        <div style={{ fontSize:13,fontWeight:700,color:"#1d4ed8",marginBottom:8 }}>
-                                            📱 Citizen-এর ফোনে যে SMS যাবে:
-                                        </div>
-                                        <div style={{ fontSize:13,color:"#374151",lineHeight:1.7,background:"white",padding:"10px 12px",borderRadius:8 }}>
-                                            প্রিয় <strong>{approveModal.child_name_bn||approveModal.child_name_en||"আবেদনকারী"}</strong>,<br/>
-                                            আপনার জন্ম নিবন্ধন আবেদন (<strong>{approveModal.tracking_id}</strong>) অনুমোদিত হয়েছে এবং এখন <strong>In Progress</strong> অবস্থায় আছে।<br/>
-                                            প্রত্যাশিত সম্পন্নের তারিখ: <strong>{expectedDate}</strong>।<br/>
-                                            — Smart Citizen Service Tracker
-                                        </div>
+                                    <div style={{ background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:10,padding:"12px 14px",marginBottom:20,fontSize:13,color:"#166534" }}>
+                                        
                                     </div>
 
                                     <div style={{ display:"flex",justifyContent:"flex-end",gap:10 }}>
                                         <button style={s.cancelBtn} onClick={()=>setApproveModal(null)} disabled={approveSending}>বাতিল</button>
                                         <button style={{ ...s.submitBtn,opacity:approveSending?0.7:1 }}
                                             onClick={handleApproveConfirm} disabled={approveSending}>
-                                            {approveSending?"পাঠানো হচ্ছে...":"✓ অনুমোদন করুন ও SMS পাঠান"}
+                                            {approveSending?"অনুমোদন হচ্ছে...":"✓ অনুমোদন করুন"}
                                         </button>
                                     </div>
                                 </div>
