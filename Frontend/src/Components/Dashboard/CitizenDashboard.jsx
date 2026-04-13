@@ -128,6 +128,9 @@ const CitizenDashboard = () => {
     const [activeTab, setActiveTab]       = useState('all');
     const [searchQuery, setSearchQuery]   = useState('');
     const [timeFilter, setTimeFilter]     = useState('all');
+    const [notifications, setNotifications]   = useState([]);
+    const [unreadCount, setUnreadCount]       = useState(0);
+    const [showNotifPanel, setShowNotifPanel] = useState(false);
 
     const fetchDashboardData = useCallback(async () => {
         try {
@@ -161,7 +164,46 @@ const CitizenDashboard = () => {
     }, []);
 
     
-    useEffect(() => { fetchDashboardData(); }, [fetchDashboardData]);
+    // Fetch notifications from DB
+    const fetchNotifications = async () => {
+        try {
+            const res  = await api.get('/notifications');
+            const data = res?.data?.data ?? res?.data ?? {};
+            setNotifications(data.notifications || []);
+            setUnreadCount(data.unreadCount || 0);
+        } catch (err) {
+            console.error('Notification fetch error:', err);
+        }
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
+        fetchNotifications();
+    }, [fetchDashboardData]);
+
+    // Mark single notification as read
+    const handleMarkRead = async (notifId) => {
+        try {
+            await api.patch(`/notifications/${notifId}/read`);
+            setNotifications(prev => prev.map(n =>
+                n.notif_id === notifId ? { ...n, is_read: true } : n
+            ));
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    // Mark all as read
+    const handleMarkAllRead = async () => {
+        try {
+            await api.patch('/notifications/read-all');
+            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            setUnreadCount(0);
+        } catch (err) {
+            console.error(err);
+        }
+    };
 
     const handleLogout = () => { removeToken(); removeUser(); navigate('/login'); };
 
@@ -247,13 +289,67 @@ const CitizenDashboard = () => {
                     {/*  Language Switcher Button */}
                     <LangSwitcher />
 
-                    {/* Notification Bell */}
-                    <div style={{ position: 'relative', cursor: 'pointer', color: '#4B5563' }}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                        </svg>
-                        <div style={{ position: 'absolute', top: -3, right: -3, width: 8, height: 8, background: '#EF4444', borderRadius: '50%', border: '1.5px solid white' }} />
+                    {/* Notification Bell — DB connected */}
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => { setShowNotifPanel(p => !p); if (!showNotifPanel) fetchNotifications(); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4B5563', position: 'relative', padding: 4 }}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                            </svg>
+                            {unreadCount > 0 && (
+                                <span style={{ position: 'absolute', top: -2, right: -2, background: '#EF4444', color: 'white', borderRadius: '50%', width: 16, height: 16, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1.5px solid white' }}>
+                                    {unreadCount > 9 ? '9+' : unreadCount}
+                                </span>
+                            )}
+                        </button>
+
+                        {/* Notification Dropdown Panel */}
+                        {showNotifPanel && (
+                            <div style={{ position: 'absolute', right: 0, top: '110%', width: 340, background: 'white', borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #e5e7eb', zIndex: 500, overflow: 'hidden' }}>
+                                {/* Panel header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #f3f4f6' }}>
+                                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>
+                                        নোটিফিকেশন {unreadCount > 0 && <span style={{ background: '#EF4444', color: 'white', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 6 }}>{unreadCount}</span>}
+                                    </div>
+                                    {unreadCount > 0 && (
+                                        <button onClick={handleMarkAllRead} style={{ background: 'none', border: 'none', color: '#166534', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                                            সব পড়া হিসেবে চিহ্নিত করুন
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Notification list */}
+                                <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                                    {notifications.length === 0 ? (
+                                        <div style={{ padding: '32px 16px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
+                                            কোনো নোটিফিকেশন নেই
+                                        </div>
+                                    ) : (
+                                        notifications.map(n => (
+                                            <div
+                                                key={n.notif_id}
+                                                onClick={() => !n.is_read && handleMarkRead(n.notif_id)}
+                                                style={{ padding: '12px 16px', borderBottom: '1px solid #f9fafb', background: n.is_read ? 'white' : '#f0fdf4', cursor: n.is_read ? 'default' : 'pointer', transition: 'background 0.15s' }}
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                                                    {!n.is_read && <div style={{ width: 8, height: 8, background: '#166534', borderRadius: '50%', flexShrink: 0, marginTop: 5 }}/>}
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 700, color: '#111', marginBottom: 3 }}>{n.title}</div>
+                                                        <div style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.5 }}>{n.message}</div>
+                                                        <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
+                                                            {new Date(n.sent_at).toLocaleDateString('bn-BD', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* User */}
