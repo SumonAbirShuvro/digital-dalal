@@ -1,12 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { isAuthenticated, getUser } from "./utils/auth";
-import { LanguageProvider } from "./Context/LanguageContext";
+import { LanguageProvider } from "./context/LanguageContext";
 
-import HomePage from "./Components/public/HomePage";
-import AboutPage from "./Components/public/AboutPage";
-import AvailableServicesPage from "./Components/public/AvailableServicesPage";
-import ContactPage from "./Components/public/ContactPage";
-import FeedbackPage from "./Components/public/FeedbackPage";
+import HomePage              from "./Components/Public/HomePage";
+import AboutPage             from "./Components/Public/AboutPage";
+import AvailableServicesPage from "./Components/Public/AvailableServicesPage";
+import ContactPage           from "./Components/Public/ContactPage";
 
 import Login            from "./Components/Auth/Login";
 import Register         from "./Components/Auth/Register";
@@ -24,7 +23,7 @@ import PaymentPage               from "./Components/Dashboard/PaymentPage";
 import PaymentSuccessPage        from "./Components/Dashboard/PaymentSuccessPage";
 import PaymentCancelPage         from "./Components/Dashboard/PaymentCancelPage";
 import TrackingPage              from "./Components/Dashboard/TrackingPage";
-import FeedbackPage              from "./Components/public/FeedbackPage";
+import FeedbackPage              from "./Components/Public/FeedbackPage";
 
 const ProtectedRoute = ({ children }) =>
     isAuthenticated() ? children : <Navigate to="/login" replace />;
