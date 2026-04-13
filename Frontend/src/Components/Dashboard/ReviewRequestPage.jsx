@@ -4,7 +4,7 @@ import { useLanguage, LangSwitcher } from "../../context/LanguageContext";
 import { getUser, removeToken, removeUser } from "../../utils/auth";
 import api from "../../services/api";
 
-// Local translations
+/* ── Local translations ── */
 const T = {
     bn: {
         title:        'Birth Certificate Application',
@@ -28,7 +28,7 @@ const T = {
         notFound:     'আবেদন পাওয়া যায়নি।',
         doneTitle:    'আবেদন অনুমোদিত হয়েছে!',
         doneSub:      'Dashboard-এ ফিরছেন...',
-        // Info labels
+        /* Info labels */
         nameBn:       'আবেদনকারীর নাম (বাংলা)',
         nameEn:       'আবেদনকারীর নাম (ইংরেজি)',
         dob:          'জন্ম তারিখ',
@@ -41,13 +41,23 @@ const T = {
         address:      'স্থায়ী ঠিকানা',
         fee:          'সেবা ফি',
         submitDate:   'আবেদনের তারিখ',
-        // Doc labels 
+        /* Doc labels */
         hospital_certificate: 'হাসপাতাল সনদ',
+
 
         birth_certificate:    'জন্ম নিবন্ধন সনদ',
         passport_photo:       'পাসপোর্ট ছবি',
-       
-        closeModal:   '✕ বন্ধ করুন',
+        /* Modal */
+        closeModal:        '✕ বন্ধ করুন',
+        rejectBtn:         '✕ বাতিল করুন',
+        rejecting:         'বাতিল হচ্ছে...',
+        rejectTitle:       'আবেদন বাতিল করুন',
+        rejectReasonLbl:   'বাতিলের কারণ লিখুন',
+        rejectReasonPh:    'যেমন: NID তথ্য সঠিক নয়, নথিপত্র অসম্পূর্ণ...',
+        rejectConfirmBtn:  '✕ বাতিল নিশ্চিত করুন',
+        rejectNote:        'বাতিল করলে Citizen-এর notification bell-এ জানানো হবে এবং তিনি পুনরায় আবেদন করতে পারবেন।',
+        rejectErrEmpty:    'বাতিলের কারণ লিখুন',
+        rejectedTitle:     'আবেদন বাতিল হয়েছে!',
     },
     en: {
         title:        'Birth Certificate Application',
@@ -85,9 +95,19 @@ const T = {
         submitDate:   'Application Date',
         hospital_certificate: 'Hospital Certificate',
 
+
         birth_certificate:    'Birth Certificate',
         passport_photo:       'Passport Photo',
-        closeModal:   '✕ Close',
+        closeModal:        '✕ Close',
+        rejectBtn:         '✕ Reject',
+        rejecting:         'Rejecting...',
+        rejectTitle:       'Reject Application',
+        rejectReasonLbl:   'Reason for Rejection',
+        rejectReasonPh:    'e.g. NID incorrect, incomplete documents...',
+        rejectConfirmBtn:  '✕ Confirm Rejection',
+        rejectNote:        'Citizen will be notified and can re-apply.',
+        rejectErrEmpty:    'Please enter rejection reason',
+        rejectedTitle:     'Application Rejected!',
     },
 };
 
@@ -99,15 +119,39 @@ export default function ReviewRequestPage() {
     const tt        = T[lang];
     const user      = getUser();
 
-    const [app, setApp]               = useState(location.state?.app || null);
+    const [app, setApp]               = useState(null);
     const [documents, setDocuments]   = useState([]);
-    const [loading, setLoading]       = useState(!location.state?.app);
+    const [loading, setLoading]       = useState(true);
     const [docLoading, setDocLoading] = useState(true);
     const [approving, setApproving]   = useState(false);
     const [done, setDone]             = useState(false);
     const [verifiedDocs, setVerifiedDocs] = useState({});
 
-    const [docModal, setDocModal]     = useState(null); 
+    // ✅ Document popup modal state
+    const [docModal, setDocModal]         = useState(null);
+    const [showRejectModal, setShowRejectModal] = useState(false);
+    const [rejectReason, setRejectReason]       = useState('');
+    const [rejectErr, setRejectErr]             = useState('');
+    const [rejecting, setRejecting]             = useState(false);
+    const [rejected, setRejected]               = useState(false); // { url, name, type }
+
+    const handleReject = async () => {
+        if (!rejectReason.trim()) { setRejectErr(tt.rejectErrEmpty); return; }
+        setRejecting(true);
+        try {
+            await api.patch(`/applications/${app.app_id}/status`, {
+                status: 'rejected',
+                rejection_reason: rejectReason.trim(),
+                remarks: rejectReason.trim()
+            });
+            setShowRejectModal(false);
+            setRejected(true);
+            setTimeout(() => navigate('/review-handler/dashboard'), 2800);
+        } catch (err) {
+            console.error('Reject error:', err);
+            setRejecting(false);
+        }
+    };
 
     const handleLogout = () => { removeToken(); removeUser(); navigate("/login"); };
 
@@ -149,7 +193,12 @@ export default function ReviewRequestPage() {
 
     //  Open document in popup modal
     const handleViewDoc = (doc) => {
-        const url = `http://localhost:5000${doc.file_path}`;
+        // Windows path: C:\...\src\uploads\file.jpg → /uploads/file.jpg
+        let fp = doc.file_path || '';
+        fp = fp.replace(/\\/g, '/');
+        const idx = fp.indexOf('/uploads/');
+        const cleanPath = idx !== -1 ? fp.substring(idx) : `/uploads/${doc.file_name}`;
+        const url = `http://localhost:5000${cleanPath}`;
         setDocModal({ url, name: doc.file_name, type: doc.mime_type });
     };
 
@@ -201,11 +250,11 @@ export default function ReviewRequestPage() {
 
                 {loading ? (
                     <div style={{ textAlign: "center", padding: 60, color: "#6b7280" }}>{tt.loading}</div>
-                ) : done ? (
+                ) : (done || rejected) ? (
                     <div style={{ textAlign: "center", padding: 60 }}>
                         <div style={{ fontSize: 56 }}>✅</div>
                         <div style={{ fontSize: 18, fontWeight: 700, color: "#15803d", marginTop: 16 }}>{tt.doneTitle}</div>
-                        <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>{tt.doneSub}</div>
+                        <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>Citizen-এর notification bell-এ জানানো হয়েছে। Dashboard-এ ফিরছেন...</div>
                     </div>
                 ) : app ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -291,7 +340,7 @@ export default function ReviewRequestPage() {
                                                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>{doc.file_name}</div>
                                             </div>
 
-                                          
+                                            {/*  View → popup modal, না গিয়ে এই পেজেই দেখাবে */}
                                             <button
                                                 onClick={() => handleViewDoc(doc)}
                                                 style={{ padding: "7px 14px", background: "#fff", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", whiteSpace: "nowrap" }}
@@ -317,15 +366,20 @@ export default function ReviewRequestPage() {
                             )}
                         </div>
 
-                        
+                        {/* ── Approve Actions (SMS card বাদ) ── */}
                         <div style={s.card}>
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <button style={s.cancelBtn} onClick={() => navigate("/review-handler/dashboard")}>
-                                    {tt.cancelBtn}
-                                </button>
+                            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                                     {documents.length > 0 && !allVerified && (
                                         <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 600 }}>{tt.warnVerify}</span>
+                                    )}
+                                    {app.status !== "processing" && app.status !== "rejected" && (
+                                        <button
+                                            style={s.rejectBtn}
+                                            onClick={() => { setShowRejectModal(true); setRejectReason(''); setRejectErr(''); }}
+                                        >
+                                            {tt.rejectBtn}
+                                        </button>
                                     )}
                                     <button
                                         style={{ ...s.approveBtn, opacity: (approving || !allVerified || app.status === "processing") ? 0.5 : 1, cursor: !allVerified ? "not-allowed" : "pointer" }}
@@ -344,7 +398,57 @@ export default function ReviewRequestPage() {
                 )}
             </main>
 
-           
+
+            {/* Rejection Modal */}
+            {showRejectModal && (
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+                    onClick={e => e.target === e.currentTarget && setShowRejectModal(false)}>
+                    <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
+
+                        {/* Header */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb", background: "#fef2f2" }}>
+                            <div style={{ fontWeight: 700, fontSize: 16, color: "#991b1b" }}>✕ {tt.rejectTitle}</div>
+                            <button onClick={() => setShowRejectModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#991b1b" }}>✕</button>
+                        </div>
+
+                        <div style={{ padding: "20px 24px" }}>
+                            {/* Note */}
+                            <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "12px 14px", marginBottom: 18, fontSize: 13, color: "#92400e" }}>
+                                ℹ️ {tt.rejectNote}
+                            </div>
+
+                            {/* Reason */}
+                            <div style={{ marginBottom: 20 }}>
+                                <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
+                                    {tt.rejectReasonLbl} <span style={{ color: "#ef4444" }}>*</span>
+                                </label>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={e => { setRejectReason(e.target.value); setRejectErr(''); }}
+                                    placeholder={tt.rejectReasonPh}
+                                    rows={4}
+                                    style={{ width: "100%", padding: "11px 14px", border: `1.5px solid ${rejectErr ? "#ef4444" : "#e5e7eb"}`, borderRadius: 10, fontSize: 14, resize: "vertical", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                                />
+                                {rejectErr && <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{rejectErr}</div>}
+                            </div>
+
+                            {/* Buttons */}
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+                                <button onClick={() => setShowRejectModal(false)}
+                                    style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "11px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer", color: "#555" }}>
+                                    {tt.cancelBtn}
+                                </button>
+                                <button onClick={handleReject} disabled={rejecting}
+                                    style={{ background: rejecting ? "#9ca3af" : "#dc2626", border: "none", borderRadius: 8, padding: "11px 26px", fontWeight: 700, fontSize: 14, cursor: rejecting ? "not-allowed" : "pointer", color: "#fff" }}>
+                                    {rejecting ? tt.rejecting : tt.rejectConfirmBtn}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ✅ Document Popup Modal — একই page-এ document দেখাবে */}
             {docModal && (
                 <div
                     style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}
@@ -352,7 +456,7 @@ export default function ReviewRequestPage() {
                 >
                     <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 860, maxHeight: "88vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
 
-                        
+                        {/* Modal header */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>{docModal.name}</div>
                             <button
@@ -430,5 +534,6 @@ const s = {
     sectionTitle: { fontSize: 15, fontWeight: 700, color: "#111" },
     grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 32px" },
     cancelBtn: { background: "#f3f4f6", border: "none", borderRadius: 8, padding: "11px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer", color: "#555" },
+    rejectBtn:  { background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: 8, padding: "11px 22px", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#991b1b" },
     approveBtn: { background: "#15803d", border: "none", borderRadius: 8, padding: "11px 26px", fontWeight: 700, fontSize: 14, cursor: "pointer", color: "#fff" },
 };
