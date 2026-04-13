@@ -1,5 +1,6 @@
 const db   = require('../config/database');
 const path = require('path');
+const { createNotification } = require('./notificationController');
 
 // Generate unique tracking ID
 
@@ -13,7 +14,7 @@ function generateTrackingId() {
 // GET LOGGED-IN CITIZEN'S OWN APPLICATIONS
 // HTTP Method: GET
 // Route: GET /api/applications/my
-// Access: Citizen (authenticated) 
+
 
 const getMyApplications = async (req, res) => {
     try {
@@ -32,15 +33,7 @@ const getMyApplications = async (req, res) => {
                 a.rejection_reason,
                 a.submitted_at,
                 a.approved_at,
-                a.completed_at,
-                a.service_type,
-                a.father_name_bn,
-                a.father_name_en,
-                a.father_nationality,
-                a.mother_name_bn,
-                a.mother_name_en,
-                a.mother_nationality,
-                a.permanent_address
+                a.completed_at
             FROM applications a
             WHERE a.user_id = ?
             ORDER BY a.submitted_at DESC
@@ -77,15 +70,6 @@ const getAllApplications = async (req, res) => {
                 a.status,
                 a.fee_amount,
                 a.submitted_at,
-                a.service_type,
-                a.birth_place,
-                a.father_name_bn,
-                a.father_name_en,
-                a.father_nationality,
-                a.mother_name_bn,
-                a.mother_name_en,
-                a.mother_nationality,
-                a.permanent_address,
                 u.name   AS applicant_name,
                 u.mobile AS applicant_mobile
             FROM applications a
@@ -106,6 +90,7 @@ const getAllApplications = async (req, res) => {
     }
 };
 
+// GET SINGLE APPLICATION BY ID
 // HTTP Method: GET
 // Route: GET /api/applications/:id
 // Access: Citizen (own) / Officer / Admin
@@ -132,7 +117,7 @@ const getApplicationById = async (req, res) => {
             });
         }
 
-        const [docs] = await db.query(
+            const [docs] = await db.query(
             'SELECT doc_id, doc_type, file_name, file_path, mime_type, uploaded_at FROM documents WHERE app_id = ?',
             [id]
         );
@@ -149,6 +134,7 @@ const getApplicationById = async (req, res) => {
     }
 };
 
+
 // CREATE NEW APPLICATION
 // HTTP Method: POST
 // Route: POST /api/applications
@@ -156,7 +142,7 @@ const getApplicationById = async (req, res) => {
 
 const createApplication = async (req, res) => {
     try {
-       
+     
         const user_id = req.user.userId;
 
         const {
@@ -175,11 +161,24 @@ const createApplication = async (req, res) => {
             fee_amount
         } = req.body;
 
-        
         if (!child_name_bn || !birth_date || !gender) {
             return res.status(400).json({
                 success: false,
                 error: 'child_name_bn, birth_date এবং gender আবশ্যক'
+            });
+        }
+
+        if (!father_name_en || !father_name_en.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: "Father's name in English is required"
+            });
+        }
+
+        if (!mother_name_en || !mother_name_en.trim()) {
+            return res.status(400).json({
+                success: false,
+                error: "Mother's name in English is required"
             });
         }
 
@@ -198,23 +197,22 @@ const createApplication = async (req, res) => {
             user_id, tracking_id,
             child_name_bn || null, child_name_en || null,
             birth_date, birth_place || null, gender,
-            father_name_bn || null, father_name_en || null, father_nationality || null,
-            mother_name_bn || null, mother_name_en || null, mother_nationality || null,
+            father_name_bn || null, father_name_en.trim(), father_nationality || null,
+            mother_name_bn || null, mother_name_en.trim(), mother_nationality || null,
             permanent_address || null, fee_amount || 100
         ]);
 
         const app_id = result.insertId;
 
-        //  Uploaded files
         if (req.files && req.files.length > 0) {
             const docValues = req.files.map(file => [
                 app_id,
-                'application_document',          // doc_type
-                file.originalname,               // file_name
-                file.path,                       // file_path (disk location)
-                file.size,                       // file_size
-                file.mimetype,                   // mime_type
-                user_id                          // uploaded_by
+                'application_document',          
+                file.originalname,              
+                file.path,
+                file.size,                       
+                file.mimetype,                   
+                user_id                          
             ]);
 
             await db.query(`
@@ -248,7 +246,8 @@ const createApplication = async (req, res) => {
     }
 };
 
-// FULL UPDATE APPLICATION
+
+
 // HTTP Method: PUT
 // Route: PUT /api/applications/:id
 // Access: Citizen (own application)
@@ -276,6 +275,7 @@ const updateApplication = async (req, res) => {
             });
         }
 
+       
         if (req.user.role === 'citizen' && existing[0].user_id !== user_id) {
             return res.status(403).json({
                 success: false,
@@ -327,6 +327,8 @@ const updateApplication = async (req, res) => {
         res.status(500).json({ success: false, error: 'আবেদন আপডেট করতে ব্যর্থ হয়েছে' });
     }
 };
+
+
 
 // HTTP Method: PATCH
 // Route: PATCH /api/applications/:id/status
@@ -387,6 +389,32 @@ const updateApplicationStatus = async (req, res) => {
             VALUES (?, ?, ?, ?, ?)
         `, [id, oldStatus, status, req.user.userId, rejection_reason || null]);
 
+      
+        const app = existing[0];
+        const citizenId = app.user_id;
+        const trackingId = app.tracking_id;
+        const childName = app.child_name_bn || app.child_name_en || 'আবেদনকারী';
+
+        if (status === 'processing') {
+            await createNotification(
+                citizenId, parseInt(id),
+                'আবেদন অনুমোদিত হয়েছে',
+                `প্রিয় ${childName}, আপনার জন্ম নিবন্ধন আবেদন (${trackingId}) অনুমোদিত হয়েছে এবং এখন In Progress অবস্থায় আছে।`
+            );
+        } else if (status === 'completed') {
+            await createNotification(
+                citizenId, parseInt(id),
+                'আবেদন সম্পন্ন হয়েছে',
+                `প্রিয় ${childName}, আপনার জন্ম নিবন্ধন সনদ (${trackingId}) প্রস্তুত।`
+            );
+        } else if (status === 'rejected') {
+            await createNotification(
+                citizenId, parseInt(id),
+                'আবেদন বাতিল হয়েছে',
+                `প্রিয় ${childName}, আপনার আবেদন (${trackingId}) বাতিল করা হয়েছে। কারণ: ${rejection_reason || 'তথ্য যাচাই ব্যর্থ'}`
+            );
+        }
+
         res.status(200).json({
             success: true,
             message: `আবেদন ID ${id} এর status আপডেট করা হয়েছে`,
@@ -403,6 +431,8 @@ const updateApplicationStatus = async (req, res) => {
         res.status(500).json({ success: false, error: 'Status আপডেট করতে ব্যর্থ হয়েছে' });
     }
 };
+
+
 
 // DELETE APPLICATION
 // HTTP Method: DELETE
@@ -446,6 +476,7 @@ const deleteApplication = async (req, res) => {
         res.status(500).json({ success: false, error: 'আবেদন ডিলিট করতে ব্যর্থ হয়েছে' });
     }
 };
+
 
 module.exports = {
     getMyApplications,
