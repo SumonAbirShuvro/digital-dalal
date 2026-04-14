@@ -2,10 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { isAuthenticated, getUser } from "./utils/auth";
 import { LanguageProvider } from "./context/LanguageContext";
 
-import HomePage              from "./Components/public/HomePage";
-import AboutPage             from "./Components/public/AboutPage";
-import AvailableServicesPage from "./Components/public/AvailableServicesPage";
-import ContactPage           from "./Components/public/ContactPage";
+import HomePage              from "./components/public/HomePage";
+import AboutPage             from "./components/public/AboutPage";
+import AvailableServicesPage from "./components/public/AvailableServicesPage";
+import ContactPage           from "./components/public/ContactPage";
 
 import Login            from "./components/auth/Login";
 import Register         from "./components/auth/Register";
@@ -23,7 +23,7 @@ import PaymentPage               from "./components/dashboard/PaymentPage";
 import PaymentSuccessPage        from "./components/dashboard/PaymentSuccessPage";
 import PaymentCancelPage         from "./components/dashboard/PaymentCancelPage";
 import TrackingPage              from "./components/dashboard/TrackingPage";
-import FeedbackPage              from "./Components/public/FeedbackPage";
+import FeedbackPage              from "./components/public/FeedbackPage";
 
 
 /* ── Global Chat Support Button ── */
