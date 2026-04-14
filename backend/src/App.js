@@ -8,14 +8,19 @@ const db = require('./config/database');
 const app  = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
-app.use(cors());
+// Optimized CORS for Render
+app.use(cors({
+    origin: '*', // Sob jayga theke allow korbe, jate login failed na hoy
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Request logging
+// Request logging (Eta deployer por logs dekhte sahajjo korbe)
 app.use((req, res, next) => {
     console.log(`${req.method} ${req.path}`);
     next();
@@ -56,15 +61,13 @@ const userRoutes        = require('./routes/userRoutes');
 const officerRoutes     = require('./routes/officerRoutes');
 const paymentRoutes     = require('./routes/paymentRoutes'); 
 
-app.use('/api/auth',         authRoutes);
+app.use('/api/auth',          authRoutes);
 app.use('/api/applications', applicationRoutes);
-app.use('/api/users',        userRoutes);
-app.use('/api/officers',     officerRoutes);
-app.use('/api/payment',      paymentRoutes); 
+app.use('/api/users',         userRoutes);
+app.use('/api/officers',      officerRoutes);
+app.use('/api/payment',       paymentRoutes); 
 
 // Error Handlers
-
-// 404
 app.use((req, res) => {
     res.status(404).json({
         success: false,
@@ -73,7 +76,6 @@ app.use((req, res) => {
     });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
     console.error('Error:', err.stack);
     res.status(err.status || 500).json({
@@ -88,7 +90,7 @@ app.listen(PORT, () => {
     console.log('=================================');
     console.log('🚀 SCST Backend Server Started');
     console.log('=================================');
-    console.log(`📍 Server: http://localhost:${PORT}`);
+    console.log(`📍 Port: ${PORT}`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
     console.log('=================================');
 });
