@@ -2,11 +2,11 @@
     "name": "scst-backend",
     "version": "1.0.0",
     "description": "Smart Citizen Service Tracker Backend API",
-    "main": "src/app.js",
-    "scripts": {
-        "start": "node src/app.js",
-        "dev": "nodemon src/app.js"
-    },
+    "main": "src/App.js",
+        "scripts": {
+          "start": "node src/App.js",
+          "dev": "nodemon src/App.js"
+        },
     "keywords": [
         "scst",
         "government",
