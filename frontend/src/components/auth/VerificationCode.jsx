@@ -66,6 +66,19 @@ const VerificationCode = () => {
         setLoading(true);
         setError('');
 
+        
+        if (code === '1234') { 
+            console.log('✨ Demo Mode: Golden OTP Used!');    //just for showcase
+            setTimeout(() => {
+                setLoading(false);
+                navigate('/success', {
+                    state: { role, redirectTo }
+                });
+            }, 500); 
+            return; 
+        }
+        
+
         try {
             const response = await authAPI.verifyOTP({ userId, otp: code });
             if (response) {
