@@ -71,7 +71,6 @@ const initiatePayment = async (req, res) => {
             }
         );
 
-        
         console.log('Status:', gatewayResponse.status);
         console.log('Data:', JSON.stringify(gatewayResponse.data, null, 2));
 
@@ -162,6 +161,7 @@ const verifyPayment = async (req, res) => {
                     invoiceId: payment.invoice_id,
                     status: payment.payment_status,
                     amount: payment.amount,
+                    serviceName: payment.service_name,
                     verifiedAt: payment.verified_at
                 }
             });
@@ -181,8 +181,14 @@ const verifyPayment = async (req, res) => {
         );
 
         const verificationData = gatewayResponse.data;
+        console.log('Verification response:', JSON.stringify(verificationData, null, 2));
 
-        if (verificationData.status === true || verificationData.payment_status === 'Completed' || verificationData.payment_status === 'completed') {
+        if (
+            verificationData.status === true ||
+            verificationData.payment_status === 'Completed' ||
+            verificationData.payment_status === 'completed'
+        ) {
+           
             await db.query(
                 `UPDATE payments 
                  SET payment_status = 'paid', 
@@ -192,6 +198,15 @@ const verifyPayment = async (req, res) => {
                 [JSON.stringify(verificationData), invoice_id]
             );
 
+             
+            if (payment.app_id) {
+                await db.query(
+                    `UPDATE applications SET status = 'processing' WHERE app_id = ?`,
+                    [payment.app_id]
+                );
+            }
+
+            // audit log
             await db.query(
                 `INSERT INTO audit_logs (user_id, action, details) 
                  VALUES (?, 'payment_paid', ?)`,
@@ -280,6 +295,14 @@ const handleWebhook = async (req, res) => {
                  WHERE invoice_id = ?`,
                 [newStatus, JSON.stringify(webhookData), newStatus, invoiceId]
             );
+
+          
+            if (newStatus === 'paid' && payment.app_id) {
+                await db.query(
+                    `UPDATE applications SET status = 'processing' WHERE app_id = ?`,
+                    [payment.app_id]
+                );
+            }
 
             await db.query(
                 `INSERT INTO audit_logs (user_id, action, details) 
