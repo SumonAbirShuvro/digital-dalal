@@ -65,9 +65,9 @@ export default function FeedbackPage() {
     const tt        = T[lang];
     const user      = getUser();
 
-    const [type, setType]         = useState('feedback');
-    const [category, setCategory] = useState('');
-    const [subject, setSubject]   = useState('');
+    const [type, setType]               = useState('feedback');
+    const [category, setCategory]       = useState('');
+    const [subject, setSubject]         = useState('');
     const [description, setDescription] = useState('');
     const [trackingId, setTrackingId]   = useState('');
     const [submitting, setSubmitting]   = useState(false);
@@ -96,9 +96,8 @@ export default function FeedbackPage() {
             });
             setSubmitted(true);
         } catch (err) {
-            // Even if API fails, show success (can be offline/demo)
             console.error(err);
-            setSubmitted(true);
+            setSubmitted(true); 
         } finally {
             setSubmitting(false);
         }
@@ -111,7 +110,7 @@ export default function FeedbackPage() {
             <header style={s.navbar}>
                 <div style={s.navLeft} onClick={() => navigate('/home')}>
                     <div style={s.logoBox}>
-                        <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" style={{borderRadius:3,boxShadow:'0 1px 4px rgba(0,0,0,0.18)'}}>
+                        <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" style={{borderRadius:3, boxShadow:'0 1px 4px rgba(0,0,0,0.18)'}}>
                             <rect width="28" height="20" fill="#006A4E"/>
                             <circle cx="13" cy="10" r="6" fill="#F42A41"/>
                         </svg>
@@ -129,7 +128,6 @@ export default function FeedbackPage() {
 
             <main style={s.main}>
                 {submitted ? (
-                    /* ── Success ── */
                     <div style={s.successCard}>
                         <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
                         <div style={{ fontSize: 24, fontWeight: 800, color: '#166534', marginBottom: 12 }}>{tt.successTitle}</div>
@@ -163,20 +161,20 @@ export default function FeedbackPage() {
 
                         {/* Type selector */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-                            {['feedback', 'complaint'].map(t => (
+                            {['feedback', 'complaint'].map(tp => (
                                 <div
-                                    key={t}
-                                    onClick={() => setType(t)}
+                                    key={tp}
+                                    onClick={() => setType(tp)}
                                     style={{
                                         padding: '14px 16px', borderRadius: 12, cursor: 'pointer', textAlign: 'center',
-                                        border: type === t ? `2px solid ${t === 'feedback' ? '#166534' : '#dc2626'}` : '1.5px solid #e5e7eb',
-                                        background: type === t ? (t === 'feedback' ? '#f0fdf4' : '#fef2f2') : 'white',
+                                        border: type === tp ? `2px solid ${tp === 'feedback' ? '#166534' : '#dc2626'}` : '1.5px solid #e5e7eb',
+                                        background: type === tp ? (tp === 'feedback' ? '#f0fdf4' : '#fef2f2') : 'white',
                                         fontWeight: 700, fontSize: 14,
-                                        color: type === t ? (t === 'feedback' ? '#166534' : '#dc2626') : '#555',
+                                        color: type === tp ? (tp === 'feedback' ? '#166534' : '#dc2626') : '#555',
                                         transition: 'all 0.15s',
                                     }}
                                 >
-                                    {t === 'feedback' ? tt.typeFeedback : tt.typeComplaint}
+                                    {tp === 'feedback' ? tt.typeFeedback : tt.typeComplaint}
                                 </div>
                             ))}
                         </div>
@@ -184,11 +182,7 @@ export default function FeedbackPage() {
                         {/* Category */}
                         <div style={s.field}>
                             <label style={s.label}>{tt.catLabel}</label>
-                            <select
-                                value={category}
-                                onChange={e => setCategory(e.target.value)}
-                                style={s.input}
-                            >
+                            <select value={category} onChange={e => setCategory(e.target.value)} style={s.input}>
                                 <option value="">— {tt.catLabel} —</option>
                                 {tt.catOptions.map((opt, i) => (
                                     <option key={i} value={opt}>{opt}</option>
@@ -264,3 +258,25 @@ export default function FeedbackPage() {
         </div>
     );
 }
+
+
+const s = {
+    root:        { minHeight: '100vh', background: '#f4f6f4', fontFamily: "'Segoe UI','Inter',sans-serif", display: 'flex', flexDirection: 'column' },
+    navbar:      { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px clamp(12px,3vw,32px)', background: '#fff', borderBottom: '1px solid #e5e7eb', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' },
+    navLeft:     { display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' },
+    logoBox:     { display: 'flex', alignItems: 'center', justifyContent: 'center' },
+    appName:     { fontWeight: 700, fontSize: 15, color: '#111' },
+    appSub:      { fontSize: 11, color: '#888' },
+    backBtn:     { background: 'none', border: '1px solid #d1d5db', borderRadius: 8, padding: '7px 16px', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer' },
+    main:        { flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: 'clamp(16px,3vw,40px) clamp(12px,3vw,24px)' },
+    formCard:    { background: '#fff', borderRadius: 20, padding: 'clamp(24px,4vw,40px)', width: '100%', maxWidth: 580, boxShadow: '0 4px 24px rgba(0,0,0,0.08)' },
+    successCard: { background: '#fff', borderRadius: 20, padding: 48, width: '100%', maxWidth: 480, boxShadow: '0 4px 24px rgba(0,0,0,0.08)', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' },
+    formHeader:  { display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #f3f4f6' },
+    headerIcon:  { width: 52, height: 52, background: 'linear-gradient(135deg,#166534,#15803d)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    field:       { marginBottom: 20 },
+    label:       { display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 },
+    input:       { width: '100%', padding: '11px 14px', border: '1.5px solid #e5e7eb', borderRadius: 10, fontSize: 14, color: '#111', outline: 'none', background: '#fafafa', boxSizing: 'border-box', fontFamily: 'inherit' },
+    errText:     { fontSize: 12, color: '#ef4444', marginTop: 4 },
+    submitBtn:   { width: '100%', padding: '14px', border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#166534,#15803d)', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 14px rgba(22,101,52,0.25)' },
+    footer:      { display: 'flex', justifyContent: 'space-between', padding: '14px clamp(12px,3vw,32px)', background: '#fff', borderTop: '1px solid #e5e7eb', fontSize: 12, color: '#555', flexWrap: 'wrap', gap: 8 },
+};
