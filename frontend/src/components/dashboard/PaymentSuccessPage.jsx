@@ -3,11 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 
 export default function PaymentSuccessPage() {
-    const navigate       = useNavigate();
-    const [params]       = useSearchParams();
-    const invoiceId      = params.get('invoice_id') || params.get('invoiceId') || '';
+    const navigate  = useNavigate();
+    const [params]  = useSearchParams();
 
-    const [status, setStatus]   = useState('verifying'); // verifying | success | failed
+   
+    const invoiceId = params.get('invoice_id') || params.get('invoiceId') || localStorage.getItem('last_invoice_id') || '';
+
+    const [status, setStatus]   = useState('verifying');
     const [payData, setPayData] = useState(null);
 
     useEffect(() => {
@@ -16,10 +18,22 @@ export default function PaymentSuccessPage() {
                 setStatus('failed');
                 return;
             }
+
             try {
-                const res = await api.post('/payment/verify', { invoice_id: invoiceId });
+                const res  = await api.post('/payment/verify', { invoice_id: invoiceId });
                 const data = res?.data ?? res;
-                if (data?.data?.status === 'paid' || data?.data?.gatewayData?.status === true) {
+
+                console.log('Verify response:', data); 
+                if (
+                    data?.success === true && (
+                        data?.data?.status === 'paid' ||
+                        data?.data?.gatewayData?.status === true ||
+                        data?.data?.gatewayData?.payment_status === 'Completed' ||
+                        data?.data?.gatewayData?.payment_status === 'completed'
+                    )
+                ) {
+                  
+                    localStorage.removeItem('last_invoice_id');
                     setPayData(data.data);
                     setStatus('success');
                 } else {
@@ -30,6 +44,7 @@ export default function PaymentSuccessPage() {
                 setStatus('failed');
             }
         };
+
         verify();
     }, [invoiceId]);
 
@@ -59,14 +74,17 @@ export default function PaymentSuccessPage() {
 
                         {payData && (
                             <div style={{ background: '#f9fafb', borderRadius: 14, padding: '16px 20px', marginBottom: 28, textAlign: 'left' }}>
-                                <Row label="Invoice ID"  value={payData.invoiceId} mono />
-                                <Row label="Amount Paid" value={`৳${payData.amount}`} green />
-                                <Row label="Service"     value={payData.serviceName || 'Birth Certificate'} />
-                                <Row label="Status"      value="Paid ✓" green />
+                                <Row label="Invoice ID"  value={payData.invoiceId}                         mono  />
+                                <Row label="Amount Paid" value={`৳${payData.amount}`}                     green />
+                                <Row label="Service"     value={payData.serviceName || 'Birth Certificate'}      />
+                                <Row label="Status"      value="Paid ✓"                                   green />
                             </div>
                         )}
 
-                        <button onClick={() => navigate('/dashboard')} style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#166534,#15803d)', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 14px rgba(22,101,52,0.25)' }}>
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            style={{ width: '100%', padding: '14px', border: 'none', borderRadius: 12, background: 'linear-gradient(135deg,#166534,#15803d)', color: 'white', fontWeight: 700, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 14px rgba(22,101,52,0.25)' }}
+                        >
                             Dashboard-এ ফিরুন
                         </button>
                     </>
@@ -78,7 +96,7 @@ export default function PaymentSuccessPage() {
                         <div style={{ width: 80, height: 80, background: 'linear-gradient(135deg,#EF4444,#DC2626)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 8px 24px rgba(239,68,68,0.3)' }}>
                             <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M18 6L6 18M6 6l12 12" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></svg>
                         </div>
-                        <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>পেমেন্ট ব্যর্থ ❌</div>
+                        <div style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 8 }}>পেমেন্ট যাচাই ব্যর্থ ❌</div>
                         <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 28, lineHeight: 1.6 }}>
                             পেমেন্ট যাচাই করা যায়নি। আবার চেষ্টা করুন।
                         </div>
