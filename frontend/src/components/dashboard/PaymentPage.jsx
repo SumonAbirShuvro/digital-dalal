@@ -86,7 +86,7 @@ const PaymentPage = () => {
     const [error, setError]                   = useState('');
     const [appInfo, setAppInfo]               = useState(null);
 
-    const isSubmitting = useRef(false); 
+    const isSubmitting = useRef(false);
 
     useEffect(() => {
         if (appId && appId !== '—') {
@@ -113,13 +113,12 @@ const PaymentPage = () => {
     const selectedInfo = paymentMethods.find(m => m.id === selectedMethod);
 
     const handlePay = async () => {
-      
         if (isSubmitting.current) return;
         isSubmitting.current = true;
 
         if (!mobileNumber.trim() && selectedMethod !== 'card') {
             setError('মোবাইল নম্বর দিন।');
-            isSubmitting.current = false; 
+            isSubmitting.current = false;
             return;
         }
         setError('');
@@ -138,10 +137,15 @@ const PaymentPage = () => {
                 paymentMethod:  selectedMethod,
             });
 
-            if (response?.data?.paymentUrl || response?.paymentUrl) {
-                const paymentUrl = response?.data?.paymentUrl || response?.paymentUrl;
+            if (response?.data?.data?.paymentUrl || response?.data?.paymentUrl || response?.paymentUrl) {
+                const paymentUrl = response?.data?.data?.paymentUrl || response?.data?.paymentUrl || response?.paymentUrl;
+
+                const invoiceId = response?.data?.data?.invoiceId || response?.data?.invoiceId;
+                if (invoiceId) {
+                    localStorage.setItem('last_invoice_id', invoiceId);
+                }
+
                 window.location.href = paymentUrl;
-                
             } else {
                 throw new Error('Payment URL পাওয়া যায়নি');
             }
@@ -154,7 +158,7 @@ const PaymentPage = () => {
                 'পেমেন্ট শুরু করতে ব্যর্থ হয়েছে। আবার চেষ্টা করুন।'
             );
             setProcessing(false);
-            isSubmitting.current = false; 
+            isSubmitting.current = false;
         }
     };
 
