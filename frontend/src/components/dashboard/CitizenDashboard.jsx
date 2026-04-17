@@ -25,8 +25,7 @@ function getStatusBadge(status, statusT) {
     return { label, ...(styles[status] ?? styles['pending']) };
 }
 
-//   STAT CARD
- const StatCard = ({ label, value, total, color, barColor, icon, isActive, onClick }) => (
+const StatCard = ({ label, value, total, color, barColor, icon, isActive, onClick }) => (
     <div
         onClick={onClick}
         style={{
@@ -58,7 +57,6 @@ function getStatusBadge(status, statusT) {
     </div>
 );
 
-  
 const EmptyState = ({ onApply, d }) => (
     <div style={{
         background: 'white', borderRadius: 16, padding: '52px 24px',
@@ -110,17 +108,14 @@ const EmptyState = ({ onApply, d }) => (
     </div>
 );
 
-   // MAIN DASHBOARD
-
 const CitizenDashboard = () => {
     const navigate = useNavigate();
     const user     = getUser();
 
-    // Language context
     const { t } = useLanguage();
-    const d  = t('dashboard');                                    
-    const c  = t('common');                                            
-    const st = t('status');                                        
+    const d  = t('dashboard');
+    const c  = t('common');
+    const st = t('status');
 
     const [loading, setLoading]           = useState(true);
     const [applications, setApplications] = useState([]);
@@ -136,21 +131,20 @@ const CitizenDashboard = () => {
         try {
             setLoading(true);
             const response = await api.get('/applications/my');
-
-            //  API response format            
             const payload = response?.data;
             const raw =
-                Array.isArray(payload)                  ? payload :           
-                Array.isArray(payload?.data)            ? payload.data :      
+                Array.isArray(payload)                  ? payload :
+                Array.isArray(payload?.data)            ? payload.data :
                 Array.isArray(payload?.applications)    ? payload.applications :
-                Array.isArray(payload?.data?.data)      ? payload.data.data :  
+                Array.isArray(payload?.data?.data)      ? payload.data.data :
                 [];
             const data = raw;
 
             setApplications(data);
             setStats({
                 total:      data.length,
-                pending:    data.filter(a => a.status === 'pending').length,
+                
+                pending:    data.filter(a => a.status === 'pending' || a.status === 'rejected').length,
                 inProgress: data.filter(a => a.status === 'processing').length,
                 completed:  data.filter(a => a.status === 'completed').length,
             });
@@ -163,8 +157,6 @@ const CitizenDashboard = () => {
         }
     }, []);
 
-    
-    // Fetch notifications from DB
     const fetchNotifications = async () => {
         try {
             const res  = await api.get('/notifications');
@@ -181,7 +173,6 @@ const CitizenDashboard = () => {
         fetchNotifications();
     }, [fetchDashboardData]);
 
-    // Mark single notification as read
     const handleMarkRead = async (notifId) => {
         try {
             await api.patch(`/notifications/${notifId}/read`);
@@ -194,7 +185,6 @@ const CitizenDashboard = () => {
         }
     };
 
-    // Mark all as read
     const handleMarkAllRead = async () => {
         try {
             await api.patch('/notifications/read-all');
@@ -210,7 +200,8 @@ const CitizenDashboard = () => {
     const filteredApplications = applications.filter(app => {
         const tabMatch =
             activeTab === 'all' || activeTab === 'total' ||
-            (activeTab === 'pending'     && app.status === 'pending') ||
+         
+            (activeTab === 'pending'     && (app.status === 'pending' || app.status === 'rejected')) ||
             (activeTab === 'in-progress' && app.status === 'processing') ||
             (activeTab === 'completed'   && app.status === 'completed');
 
@@ -234,7 +225,6 @@ const CitizenDashboard = () => {
         return tabMatch && searchMatch && timeMatch;
     });
 
-   
     if (loading) return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 16, background: '#f4f6f4', fontFamily: "'Segoe UI',system-ui,sans-serif" }}>
             <div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#166534', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
@@ -243,7 +233,6 @@ const CitizenDashboard = () => {
         </div>
     );
 
-    // Stat cards config
     const statCards = [
         {
             key: 'total', label: d.statTotal, value: stats.total, color: '#1f2937', barColor: '#374151',
@@ -271,10 +260,7 @@ const CitizenDashboard = () => {
                 }
             `}</style>
 
-            {}
             <header style={{ background: 'white', borderBottom: '1px solid #e5e7eb', padding: '10px clamp(12px,3vw,32px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, minHeight: 70, position: 'sticky', top: 0, zIndex: 100 }}>
-
-                {/* Logo + Title */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div style={{ width: 42, height: 42, background: '#166534', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -288,13 +274,9 @@ const CitizenDashboard = () => {
                     </div>
                 </div>
 
-                {/* Right side: LangSwitcher + notifications + user + logout */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-
-                    {/*  Language Switcher Button */}
                     <LangSwitcher />
 
-                    {/* Notification Bell — DB connected */}
                     <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => { setShowNotifPanel(p => !p); if (!showNotifPanel) fetchNotifications(); }}
@@ -311,10 +293,8 @@ const CitizenDashboard = () => {
                             )}
                         </button>
 
-                        {/* Notification Dropdown Panel */}
                         {showNotifPanel && (
                             <div style={{ position: 'absolute', right: 0, top: '110%', width: 340, background: 'white', borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.15)', border: '1px solid #e5e7eb', zIndex: 500, overflow: 'hidden' }}>
-                                {/* Panel header */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: '1px solid #f3f4f6' }}>
                                     <div style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>
                                         নোটিফিকেশন {unreadCount > 0 && <span style={{ background: '#EF4444', color: 'white', borderRadius: 10, padding: '1px 7px', fontSize: 11, marginLeft: 6 }}>{unreadCount}</span>}
@@ -325,8 +305,6 @@ const CitizenDashboard = () => {
                                         </button>
                                     )}
                                 </div>
-
-                                {/* Notification list */}
                                 <div style={{ maxHeight: 360, overflowY: 'auto' }}>
                                     {notifications.length === 0 ? (
                                         <div style={{ padding: '32px 16px', textAlign: 'center', color: '#6b7280', fontSize: 13 }}>
@@ -357,7 +335,6 @@ const CitizenDashboard = () => {
                         )}
                     </div>
 
-                    {/* User */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#4B5563', fontSize: 14 }}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -366,7 +343,6 @@ const CitizenDashboard = () => {
                         <span className="cd-email-text">{user?.email || user?.mobile || 'User'}</span>
                     </div>
 
-                    {/* Logout */}
                     <button
                         onClick={handleLogout}
                         style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: '1px solid #d1d5db', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 14, color: '#374151', fontWeight: 500 }}
@@ -381,10 +357,8 @@ const CitizenDashboard = () => {
                 </div>
             </header>
 
-            {/* ── MAIN ── */}
             <main style={{ padding: 'clamp(16px, 3vw, 32px)' }}>
 
-                {/* STAT CARDS */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 16, marginBottom: 28 }}>
                     {statCards.map(card => (
                         <StatCard
@@ -396,7 +370,6 @@ const CitizenDashboard = () => {
                     ))}
                 </div>
 
-                {/* FILTER TABS */}
                 <div style={{ marginBottom: 16 }}>
                     <div style={{ display: 'inline-flex', background: 'white', border: '1px solid #e5e7eb', borderRadius: 10, padding: 4, gap: 2 }}>
                         {[
@@ -422,7 +395,6 @@ const CitizenDashboard = () => {
                     </div>
                 </div>
 
-                {/* SEARCH + TIME FILTER */}
                 <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
                     <div style={{ flex: 1, position: 'relative' }}>
                         <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', display: 'flex' }}>
@@ -451,7 +423,6 @@ const CitizenDashboard = () => {
                     </select>
                 </div>
 
-                {/* APPLICATION LIST */}
                 <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
                         {filteredApplications.length === 0 ? (
@@ -460,9 +431,8 @@ const CitizenDashboard = () => {
                             filteredApplications.map(app => {
                                 const badge = getStatusBadge(app.status, st);
                                 const dateStr = app.created_at
-                                    ? new Date(app.created_at).toLocaleDateString('en-GB') // dd/mm/yyyy
+                                    ? new Date(app.created_at).toLocaleDateString('en-GB')
                                     : '—';
-                                // Card subtitle
                                 const subtitle = app.child_name_bn
                                     ? `Application for birth certificate — ${app.child_name_bn}`
                                     : app.service_type === 'birth_certificate'
@@ -475,41 +445,38 @@ const CitizenDashboard = () => {
                                         style={{
                                             background: 'white',
                                             borderRadius: 16,
-                                            border: '1.5px solid #e5e7eb',
+                                       
+                                            border: app.status === 'rejected' ? '1.5px solid #FECACA' : '1.5px solid #e5e7eb',
                                             padding: '24px 28px',
                                             boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
                                             transition: 'box-shadow 0.18s',
                                         }}
                                     >
-                                        {/* ── Header row: Title + Badge + Tracking ID ── */}
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                                                 <span style={{ fontSize: 18, fontWeight: 700, color: '#111827' }}>
                                                     {app.service_type === 'passport' ? (d.servicePassport ?? 'Passport Application') : 'Birth Certificate Application'}
                                                 </span>
-                                                {/* Status Badge */}
                                                 <span style={{
                                                     display: 'inline-flex', alignItems: 'center', gap: 6,
                                                     background: badge.bg, color: badge.text,
                                                     border: `1.5px solid ${badge.border}`,
                                                     borderRadius: 999, padding: '4px 14px',
                                                     fontSize: 13, fontWeight: 600,
-                                                }}>
-                                                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: badge.dot, flexShrink: 0 }} />
-                                                    {badge.label}
-                                                </span>
-                                            </div>
-                                            <span style={{ fontSize: 13, color: '#9CA3AF', fontFamily: 'monospace', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                                {app.tracking_id ?? '—'}
+              }}>
+                        <span style={{ width: 7, height: 7, borderRadius: '50%', background: badge.dot, flexShrink: 0 }} />
+                    {badge.label}
+                         </span>
+     </div>
+     <span style={{ fontSize: 13, color: '#9CA3AF', fontFamily: 'monospace', fontWeight: 500, whiteSpace: 'nowrap' }}>
+    {app.tracking_id ?? '—'}
                                             </span>
                                         </div>
 
-                                        {/* ── Subtitle ── */}
                                         <p style={{ fontSize: 14, color: '#6B7280', margin: '0 0 16px', lineHeight: 1.5 }}>
                                             {subtitle}
                                         </p>
 
-                                        {/* ── Meta row: department | local govt | date ── */}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
                                             {[
                                                 {
@@ -532,106 +499,125 @@ const CitizenDashboard = () => {
                                             ))}
                                         </div>
 
-                                        {/* ── Action buttons ── */}
-                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flexDirection: 'column' }}>
 
-                                            {/* View Details */}
-                                            <button
-                                                onClick={() => navigate(`/applications/${app.app_id}`)}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', gap: 7,
-                                                    padding: '10px 20px',
-                                                    border: '1.5px solid #d1d5db', borderRadius: 10,
-                                                    background: 'white', cursor: 'pointer',
-                                                    fontSize: 14, fontWeight: 500, color: '#374151',
-                                                    transition: 'border-color 0.15s',
-                                                }}
-                                            >
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                                                    <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-                                                </svg>
-                                                {d.btnDetails ?? 'View Details'}
-                                            </button>
-
-                                          
-                                            {app.status === 'pending' && (
+                                            {/* View Details  */}
+                                            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                                                 <button
-                                                    onClick={() => navigate(`/payment/${app.app_id}`)}
+                                                    onClick={() => navigate(`/applications/${app.app_id}`)}
                                                     style={{
                                                         display: 'flex', alignItems: 'center', gap: 7,
-                                                        padding: '10px 22px',
-                                                        border: 'none', borderRadius: 10,
-                                                        background: '#166534', cursor: 'pointer',
-                                                        fontSize: 14, fontWeight: 700, color: 'white',
-                                                        boxShadow: '0 2px 8px rgba(22,101,52,0.20)',
+                                                        padding: '10px 20px',
+                                                        border: '1.5px solid #d1d5db', borderRadius: 10,
+                                                        background: 'white', cursor: 'pointer',
+                                                        fontSize: 14, fontWeight: 500, color: '#374151',
                                                     }}
                                                 >
                                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                                                        <rect x="2" y="5" width="20" height="14" rx="2" stroke="white" strokeWidth="1.7" />
-                                                        <path d="M2 10h20" stroke="white" strokeWidth="1.7" />
+                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                                                        <polyline points="14 2 14 8 20 8" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
                                                     </svg>
-                                                    {d.btnPay ?? 'Pay Now'}
+                                                    {d.btnDetails ?? 'View Details'}
                                                 </button>
-                                            )}
 
-                                           
-                                            {app.status === 'processing' && (
-                                                <button
-                                                    onClick={() => navigate(`/track/${app.app_id}`)}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: 7,
-                                                        padding: '10px 22px',
-                                                        border: 'none', borderRadius: 10,
-                                                        background: '#1D4ED8', cursor: 'pointer',
-                                                        fontSize: 14, fontWeight: 700, color: 'white',
-                                                        boxShadow: '0 2px 8px rgba(29,78,216,0.20)',
-                                                    }}
-                                                >
-                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                                                        <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.7" />
-                                                        <path d="M12 8v4l2.5 2.5" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
-                                                    </svg>
-                                                    {d.btnTrack ?? 'Track Status'}
-                                                </button>
-                                            )}
+                                                {app.status === 'pending' && (
+                                                    <button
+                                                        onClick={() => navigate(`/payment/${app.app_id}`)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: 7,
+                                                            padding: '10px 22px',
+                                                            border: 'none', borderRadius: 10,
+                                                            background: '#166534', cursor: 'pointer',
+                                                            fontSize: 14, fontWeight: 700, color: 'white',
+                                                            boxShadow: '0 2px 8px rgba(22,101,52,0.20)',
+                                                        }}
+                                                    >
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                                            <rect x="2" y="5" width="20" height="14" rx="2" stroke="white" strokeWidth="1.7" />
+                                                            <path d="M2 10h20" stroke="white" strokeWidth="1.7" />
+                                                        </svg>
+                                                        {d.btnPay ?? 'Pay Now'}
+                                                    </button>
+                                                )}
 
-                                           
-                                            {app.status === 'completed' && (
-                                                <button
-                                                    onClick={() => navigate(`/download/${app.app_id}`)}
-                                                    style={{
-                                                        display: 'flex', alignItems: 'center', gap: 7,
-                                                        padding: '10px 22px',
-                                                        border: 'none', borderRadius: 10,
-                                                        background: '#166534', cursor: 'pointer',
-                                                        fontSize: 14, fontWeight: 700, color: 'white',
-                                                        boxShadow: '0 2px 8px rgba(22,101,52,0.20)',
-                                                    }}
-                                                >
-                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
-                                                        <polyline points="7 10 12 15 17 10" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                                                        <line x1="12" y1="15" x2="12" y2="3" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
-                                                    </svg>
-                                                    {d.btnDownload ?? 'Download'}
-                                                </button>
-                                            )}
+                                                {app.status === 'processing' && (
+                                                    <button
+                                                        onClick={() => navigate(`/track/${app.app_id}`)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: 7,
+                                                            padding: '10px 22px',
+                                                            border: 'none', borderRadius: 10,
+                                                            background: '#1D4ED8', cursor: 'pointer',
+                                                            fontSize: 14, fontWeight: 700, color: 'white',
+                                                            boxShadow: '0 2px 8px rgba(29,78,216,0.20)',
+                                                        }}
+                                                    >
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                                            <circle cx="12" cy="12" r="9" stroke="white" strokeWidth="1.7" />
+                                                            <path d="M12 8v4l2.5 2.5" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+                                                        </svg>
+                                                        {d.btnTrack ?? 'Track Status'}
+                                                    </button>
+                                                )}
 
-                                           
+                                                {app.status === 'completed' && (
+                                                    <button
+                                                        onClick={() => navigate(`/download/${app.app_id}`)}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: 7,
+                                                            padding: '10px 22px',
+                                                            border: 'none', borderRadius: 10,
+                                                            background: '#166534', cursor: 'pointer',
+                                                            fontSize: 14, fontWeight: 700, color: 'white',
+                                                            boxShadow: '0 2px 8px rgba(22,101,52,0.20)',
+                                                        }}
+                                                    >
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+                                                            <polyline points="7 10 12 15 17 10" stroke="white" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                                                            <line x1="12" y1="15" x2="12" y2="3" stroke="white" strokeWidth="1.7" strokeLinecap="round" />
+                                                        </svg>
+                                                        {d.btnDownload ?? 'Download'}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {/*  Rejection reason box + Reapply button */}
                                             {app.status === 'rejected' && (
-                                                <span style={{
-                                                    display: 'inline-flex', alignItems: 'center', gap: 6,
-                                                    padding: '10px 18px', borderRadius: 10,
-                                                    background: '#FEF2F2', border: '1px solid #FECACA',
-                                                    fontSize: 13, fontWeight: 600, color: '#991B1B',
-                                                }}>
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                                        <circle cx="12" cy="12" r="9" stroke="#EF4444" strokeWidth="1.7" />
-                                                        <path d="M12 8v4M12 16h.01" stroke="#EF4444" strokeWidth="1.7" strokeLinecap="round" />
-                                                    </svg>
-                                                    Application Rejected
-                                                </span>
+                                                <div style={{ width: '100%', marginTop: 8 }}>
+                                                    {app.rejection_reason && (
+                                                        <div style={{
+                                                            background: '#FEF2F2',
+                                                            border: '1px solid #FECACA',
+                                                            borderRadius: 10,
+                                                            padding: '12px 16px',
+                                                            marginBottom: 12,
+                                                            fontSize: 13,
+                                                            color: '#991B1B',
+                                                            lineHeight: 1.6,
+                                                        }}>
+                                                            <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠️ বাতিলের কারণ:</div>
+                                                            <div>{app.rejection_reason}</div>
+                                                        </div>
+                                                    )}
+                                                    <button
+                                                        onClick={() => navigate('/apply/birth-certificate')}
+                                                        style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: 7,
+                                                            padding: '10px 22px',
+                                                            border: 'none', borderRadius: 10,
+                                                            background: '#DC2626', cursor: 'pointer',
+                                                            fontSize: 14, fontWeight: 700, color: 'white',
+                                                            boxShadow: '0 2px 8px rgba(220,38,38,0.25)',
+                                                        }}
+                                                    >
+                                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                                            <path d="M1 4v6h6" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            <path d="M3.51 15a9 9 0 1 0 .49-3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                        </svg>
+                                                        পুনরায় আবেদন করুন
+                                                    </button>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
