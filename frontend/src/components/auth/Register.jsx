@@ -5,7 +5,7 @@ import { authAPI } from '../../services/api';
 const Register = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
+    const [error, setError]     = useState('');
     const [language, setLanguage] = useState('bn');
 
     const [formData, setFormData] = useState({
@@ -76,7 +76,6 @@ const Register = () => {
 
             navigate('/otp-verification', {
                 state: {
-                    email:      formData.email,
                     mobile:     formData.mobile,
                     userId:     userId,
                     role:       'Citizen',
@@ -100,18 +99,8 @@ const Register = () => {
         <>
             {/* Language Selector */}
             <div className="language-selector">
-                <button
-                    className={language === 'bn' ? 'active' : ''}
-                    onClick={() => setLanguage('bn')}
-                >
-                    বাংলা
-                </button>
-                <button
-                    className={language === 'en' ? 'active' : ''}
-                    onClick={() => setLanguage('en')}
-                >
-                    English
-                </button>
+                <button className={language === 'bn' ? 'active' : ''} onClick={() => setLanguage('bn')}>বাংলা</button>
+                <button className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>English</button>
             </div>
 
             <div className="auth-container">
@@ -119,7 +108,7 @@ const Register = () => {
 
                     {/* Logo */}
                     <div className="auth-logo">
-                        <div className="logo-circle" style={{background:"transparent",border:"none",boxShadow:"none"}}>
+                        <div className="logo-circle" style={{ background: 'transparent', border: 'none', boxShadow: 'none' }}>
                             <svg width="52" height="36" viewBox="0 0 52 36" xmlns="http://www.w3.org/2000/svg">
                                 <rect width="52" height="36" rx="4" fill="#006A4E"/>
                                 <circle cx="24" cy="18" r="11" fill="#F42A41"/>
@@ -133,12 +122,10 @@ const Register = () => {
                         <p>{t.subtitle}</p>
                     </div>
 
-                    {/* Error */}
-                    {error && (
-                        <div className="error-message">⚠️ {error}</div>
-                    )}
+                    {error && <div className="error-message">⚠️ {error}</div>}
 
-                    <form onSubmit={handleSubmit} className="auth-form" noValidate>
+                
+                    <form onSubmit={handleSubmit} className="auth-form" noValidate autoComplete="off">
 
                         {/* Row 1: Full Name + Phone */}
                         <div className="form-row">
@@ -150,6 +137,7 @@ const Register = () => {
                                     value={formData.name}
                                     onChange={handleChange}
                                     placeholder={language === 'bn' ? 'আপনার নাম' : 'Your full name'}
+                                    autoComplete="off"
                                 />
                             </div>
                             <div className="form-group">
@@ -160,6 +148,7 @@ const Register = () => {
                                     value={formData.mobile}
                                     onChange={handleChange}
                                     placeholder="01XXXXXXXXX"
+                                    autoComplete="off"
                                 />
                             </div>
                         </div>
@@ -168,12 +157,14 @@ const Register = () => {
                         <div className="form-row">
                             <div className="form-group">
                                 <label>{t.email}</label>
+                                
                                 <input
                                     type="email"
                                     name="email"
                                     value={formData.email}
                                     onChange={handleChange}
                                     placeholder="example@email.com"
+                                    autoComplete="off"
                                 />
                             </div>
                             <div className="form-group">
@@ -184,6 +175,7 @@ const Register = () => {
                                     value={formData.currentAddress}
                                     onChange={handleChange}
                                     placeholder={language === 'bn' ? 'আপনার ঠিকানা' : 'Your address'}
+                                    autoComplete="off"
                                 />
                             </div>
                         </div>
@@ -191,20 +183,18 @@ const Register = () => {
                         {/* Password */}
                         <div className="form-group">
                             <label>{t.password}</label>
+                           
                             <input
                                 type="password"
                                 name="password"
                                 value={formData.password}
                                 onChange={handleChange}
                                 placeholder="••••••••"
+                                autoComplete="new-password"
                             />
                         </div>
 
-                        <button
-                            type="submit"
-                            className="btn-primary"
-                            disabled={loading}
-                        >
+                        <button type="submit" className="btn-primary" disabled={loading}>
                             {loading ? t.registering : t.registerButton}
                         </button>
 
@@ -221,7 +211,6 @@ const Register = () => {
                             </Link>
                         </p>
                     </div>
-
                 </div>
             </div>
         </>
