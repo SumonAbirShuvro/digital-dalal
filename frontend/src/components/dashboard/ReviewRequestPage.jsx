@@ -4,7 +4,9 @@ import { useLanguage, LangSwitcher } from "../../context/LanguageContext";
 import { getUser, removeToken, removeUser } from "../../utils/auth";
 import api from "../../services/api";
 
-/* ── Local translations ── */
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const T = {
     bn: {
         title:        'Birth Certificate Application',
@@ -27,8 +29,9 @@ const T = {
         docLoading:   'নথিপত্র লোড হচ্ছে...',
         notFound:     'আবেদন পাওয়া যায়নি।',
         doneTitle:    'আবেদন অনুমোদিত হয়েছে!',
-        doneSub:      'Dashboard-এ ফিরছেন...',
-        /* Info labels */
+        doneSub:      'Citizen-এর notification bell-এ জানানো হয়েছে। Dashboard-এ ফিরছেন...',
+        rejectedDoneTitle: 'আবেদন বাতিল হয়েছে!',     
+        rejectedDoneSub:   'Citizen-এর notification bell-এ জানানো হয়েছে। Dashboard-এ ফিরছেন...',
         nameBn:       'আবেদনকারীর নাম (বাংলা)',
         nameEn:       'আবেদনকারীর নাম (ইংরেজি)',
         dob:          'জন্ম তারিখ',
@@ -41,13 +44,9 @@ const T = {
         address:      'স্থায়ী ঠিকানা',
         fee:          'সেবা ফি',
         submitDate:   'আবেদনের তারিখ',
-        /* Doc labels */
         hospital_certificate: 'হাসপাতাল সনদ',
-
-
         birth_certificate:    'জন্ম নিবন্ধন সনদ',
         passport_photo:       'পাসপোর্ট ছবি',
-        /* Modal */
         closeModal:        '✕ বন্ধ করুন',
         rejectBtn:         '✕ বাতিল করুন',
         rejecting:         'বাতিল হচ্ছে...',
@@ -80,7 +79,9 @@ const T = {
         docLoading:   'Loading documents...',
         notFound:     'Application not found.',
         doneTitle:    'Application Approved!',
-        doneSub:      'Returning to Dashboard...',
+        doneSub:      'Citizen has been notified. Returning to Dashboard...',
+        rejectedDoneTitle: 'Application Rejected!',
+        rejectedDoneSub:   'Citizen has been notified. Returning to Dashboard...',
         nameBn:       'Applicant Name (Bangla)',
         nameEn:       'Applicant Name (English)',
         dob:          'Date of Birth',
@@ -94,8 +95,6 @@ const T = {
         fee:          'Service Fee',
         submitDate:   'Application Date',
         hospital_certificate: 'Hospital Certificate',
-
-
         birth_certificate:    'Birth Certificate',
         passport_photo:       'Passport Photo',
         closeModal:        '✕ Close',
@@ -114,7 +113,6 @@ const T = {
 function ReviewRequestPage() {
     const navigate  = useNavigate();
     const { id }    = useParams();
-    const location  = useLocation();
     const { lang }  = useLanguage();
     const tt        = T[lang];
     const user      = getUser();
@@ -127,13 +125,20 @@ function ReviewRequestPage() {
     const [done, setDone]             = useState(false);
     const [verifiedDocs, setVerifiedDocs] = useState({});
 
-    // ✅ Document popup modal state
-    const [docModal, setDocModal]         = useState(null);
+    const [docModal, setDocModal]               = useState(null);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectReason, setRejectReason]       = useState('');
     const [rejectErr, setRejectErr]             = useState('');
     const [rejecting, setRejecting]             = useState(false);
-    const [rejected, setRejected]               = useState(false); // { url, name, type }
+    const [rejected, setRejected]               = useState(false);
+
+    
+    const [toast, setToast] = useState('');
+
+    const showToast = (msg) => {
+        setToast(msg);
+        setTimeout(() => setToast(''), 3000);
+    };
 
     const handleReject = async () => {
         if (!rejectReason.trim()) { setRejectErr(tt.rejectErrEmpty); return; }
@@ -145,8 +150,12 @@ function ReviewRequestPage() {
                 remarks: rejectReason.trim()
             });
             setShowRejectModal(false);
-            setRejected(true);
-            setTimeout(() => navigate('/review-handler/dashboard'), 2800);
+          
+            showToast('✅ আবেদন বাতিল নিশ্চিত হয়েছে!');
+            setTimeout(() => {
+                setRejected(true);
+                setTimeout(() => navigate('/review-handler/dashboard'), 2500);
+            }, 800);
         } catch (err) {
             console.error('Reject error:', err);
             setRejecting(false);
@@ -183,22 +192,24 @@ function ReviewRequestPage() {
                 status: "processing",
                 remarks: "Review Handler কর্তৃক নথিপত্র যাচাই ও অনুমোদিত"
             });
-            setDone(true);
-            setTimeout(() => navigate("/review-handler/dashboard"), 2800);
+            showToast('✅ আবেদন অনুমোদিত হয়েছে!');
+            setTimeout(() => {
+                setDone(true);
+                setTimeout(() => navigate("/review-handler/dashboard"), 2500);
+            }, 800);
         } catch (err) {
             console.error(err);
             setApproving(false);
         }
     };
 
-    //  Open document in popup modal
+  
     const handleViewDoc = (doc) => {
-        // Windows path: C:\...\src\uploads\file.jpg → /uploads/file.jpg
         let fp = doc.file_path || '';
         fp = fp.replace(/\\/g, '/');
         const idx = fp.indexOf('/uploads/');
         const cleanPath = idx !== -1 ? fp.substring(idx) : `/uploads/${doc.file_name}`;
-        const url = `http://localhost:5000${cleanPath}`;
+        const url = `${API_BASE}${cleanPath}`;
         setDocModal({ url, name: doc.file_name, type: doc.mime_type });
     };
 
@@ -215,13 +226,22 @@ function ReviewRequestPage() {
     return (
         <div style={s.root}>
 
+            {/* ✅ Toast Notification */}
+            {toast && (
+                <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#166534', color: 'white', padding: '14px 28px', borderRadius: 12, fontWeight: 700, fontSize: 15, boxShadow: '0 8px 24px rgba(0,0,0,0.2)', zIndex: 9999, whiteSpace: 'nowrap' }}>
+                    {toast}
+                </div>
+            )}
+
             {/* Navbar */}
             <header style={s.navbar}>
                 <div style={s.navLeft}>
-                    <div style={{...s.logoBox, background:"transparent", padding:0}}><svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" style={{borderRadius:3,boxShadow:'0 1px 4px rgba(0,0,0,0.18)'}}>
+                    <div style={{...s.logoBox, background:"transparent", padding:0}}>
+                        <svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg" style={{borderRadius:3,boxShadow:'0 1px 4px rgba(0,0,0,0.18)'}}>
                             <rect width="28" height="20" fill="#006A4E"/>
                             <circle cx="13" cy="10" r="6" fill="#F42A41"/>
-                        </svg></div>
+                        </svg>
+                    </div>
                     <div>
                         <div style={s.appName}>Smart Citizen Service Tracker</div>
                         <div style={s.appSub}>Bangladesh Digital Services</div>
@@ -253,16 +273,27 @@ function ReviewRequestPage() {
 
                 {loading ? (
                     <div style={{ textAlign: "center", padding: 60, color: "#6b7280" }}>{tt.loading}</div>
-                ) : (done || rejected) ? (
+
+                ) : done ? (
+                    // ✅ Approval success
                     <div style={{ textAlign: "center", padding: 60 }}>
                         <div style={{ fontSize: 56 }}>✅</div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: "#15803d", marginTop: 16 }}>{tt.doneTitle}</div>
-                        <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>Citizen-এর notification bell-এ জানানো হয়েছে। Dashboard-এ ফিরছেন...</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#15803d", marginTop: 16 }}>{tt.doneTitle}</div>
+                        <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>{tt.doneSub}</div>
                     </div>
+
+                ) : rejected ? (
+                    
+                    <div style={{ textAlign: "center", padding: 60 }}>
+                        <div style={{ fontSize: 56 }}>❌</div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: "#DC2626", marginTop: 16 }}>{tt.rejectedDoneTitle}</div>
+                        <div style={{ fontSize: 14, color: "#6b7280", marginTop: 8 }}>{tt.rejectedDoneSub}</div>
+                    </div>
+
                 ) : app ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
-                        {/* ── Application Info ── */}
+                        {/* Application Info */}
                         <div style={s.card}>
                             <div style={s.cardHeader}>
                                 <div>
@@ -292,7 +323,7 @@ function ReviewRequestPage() {
                             </div>
                         </div>
 
-                        {/* ── Documents ── */}
+                        {/* Documents */}
                         <div style={s.card}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                                 <div style={s.sectionTitle}>{tt.docSection}</div>
@@ -308,57 +339,27 @@ function ReviewRequestPage() {
                             {docLoading ? (
                                 <div style={{ color: "#6b7280", fontSize: 14 }}>{tt.docLoading}</div>
                             ) : documents.length === 0 ? (
-                                <div style={{ background: "#fef9ef", border: "1px solid #fde68a", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "#92400e" }}>
-                                    {tt.noDoc}
-                                </div>
+                                <div style={{ background: "#fef9ef", border: "1px solid #fde68a", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "#92400e" }}>{tt.noDoc}</div>
                             ) : (
                                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                                     {documents.map(doc => (
-                                        <div key={doc.doc_id} style={{
-                                            display: "flex", alignItems: "center", gap: 12,
-                                            background: verifiedDocs[doc.doc_id] ? "#f0fdf4" : "#f9fafb",
-                                            border: `1.5px solid ${verifiedDocs[doc.doc_id] ? "#bbf7d0" : "#e5e7eb"}`,
-                                            borderRadius: 10, padding: "12px 16px", transition: "all 0.18s",
-                                        }}>
-                                            {/* Icon */}
+                                        <div key={doc.doc_id} style={{ display: "flex", alignItems: "center", gap: 12, background: verifiedDocs[doc.doc_id] ? "#f0fdf4" : "#f9fafb", border: `1.5px solid ${verifiedDocs[doc.doc_id] ? "#bbf7d0" : "#e5e7eb"}`, borderRadius: 10, padding: "12px 16px", transition: "all 0.18s" }}>
                                             <div style={{ width: 36, height: 36, background: "#fff", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #e5e7eb", flexShrink: 0 }}>
                                                 {doc.mime_type?.includes("pdf") ? (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round"/>
-                                                        <polyline points="14 2 14 8 20 8"/>
-                                                    </svg>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round"/><polyline points="14 2 14 8 20 8"/></svg>
                                                 ) : (
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round">
-                                                        <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                                        <circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                                                    </svg>
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                                                 )}
                                             </div>
-
-                                            {/* Info */}
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>
-                                                    {tt[doc.doc_type] ?? doc.doc_type}
-                                                </div>
+                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{tt[doc.doc_type] ?? doc.doc_type}</div>
                                                 <div style={{ fontSize: 12, color: "#6b7280", marginTop: 1 }}>{doc.file_name}</div>
                                             </div>
-
-                                            {/*  View → popup modal, না গিয়ে এই পেজেই দেখাবে */}
-                                            <button
-                                                onClick={() => handleViewDoc(doc)}
-                                                style={{ padding: "7px 14px", background: "#fff", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", whiteSpace: "nowrap" }}
-                                            >
+                                            <button onClick={() => handleViewDoc(doc)} style={{ padding: "7px 14px", background: "#fff", border: "1.5px solid #d1d5db", borderRadius: 8, fontSize: 13, fontWeight: 600, color: "#374151", cursor: "pointer", whiteSpace: "nowrap" }}>
                                                 {tt.viewBtn}
                                             </button>
-
-                                            {/* Verify checkbox */}
                                             <label style={{ display: "flex", alignItems: "center", gap: 7, cursor: "pointer", whiteSpace: "nowrap" }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!verifiedDocs[doc.doc_id]}
-                                                    onChange={e => setVerifiedDocs(prev => ({ ...prev, [doc.doc_id]: e.target.checked }))}
-                                                    style={{ width: 17, height: 17, accentColor: "#15803d", cursor: "pointer" }}
-                                                />
+                                                <input type="checkbox" checked={!!verifiedDocs[doc.doc_id]} onChange={e => setVerifiedDocs(prev => ({ ...prev, [doc.doc_id]: e.target.checked }))} style={{ width: 17, height: 17, accentColor: "#15803d", cursor: "pointer" }} />
                                                 <span style={{ fontSize: 13, fontWeight: 600, color: verifiedDocs[doc.doc_id] ? "#15803d" : "#6b7280" }}>
                                                     {verifiedDocs[doc.doc_id] ? tt.verified : tt.verifyCheck}
                                                 </span>
@@ -369,7 +370,7 @@ function ReviewRequestPage() {
                             )}
                         </div>
 
-                        {/* ── Approve Actions (SMS card বাদ) ── */}
+                        {/* Action Buttons */}
                         <div style={s.card}>
                             <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -377,10 +378,7 @@ function ReviewRequestPage() {
                                         <span style={{ fontSize: 13, color: "#f59e0b", fontWeight: 600 }}>{tt.warnVerify}</span>
                                     )}
                                     {app.status !== "processing" && app.status !== "rejected" && (
-                                        <button
-                                            style={s.rejectBtn}
-                                            onClick={() => { setShowRejectModal(true); setRejectReason(''); setRejectErr(''); }}
-                                        >
+                                        <button style={s.rejectBtn} onClick={() => { setShowRejectModal(true); setRejectReason(''); setRejectErr(''); }}>
                                             {tt.rejectBtn}
                                         </button>
                                     )}
@@ -394,33 +392,25 @@ function ReviewRequestPage() {
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 ) : (
                     <div style={{ textAlign: "center", padding: 60, color: "#6b7280" }}>{tt.notFound}</div>
                 )}
             </main>
 
-
             {/* Rejection Modal */}
             {showRejectModal && (
                 <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
                     onClick={e => e.target === e.currentTarget && setShowRejectModal(false)}>
                     <div style={{ background: "#fff", borderRadius: 16, width: "100%", maxWidth: 480, boxShadow: "0 24px 60px rgba(0,0,0,0.3)", overflow: "hidden" }}>
-
-                        {/* Header */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #e5e7eb", background: "#fef2f2" }}>
                             <div style={{ fontWeight: 700, fontSize: 16, color: "#991b1b" }}>✕ {tt.rejectTitle}</div>
                             <button onClick={() => setShowRejectModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#991b1b" }}>✕</button>
                         </div>
-
                         <div style={{ padding: "20px 24px" }}>
-                            {/* Note */}
                             <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "12px 14px", marginBottom: 18, fontSize: 13, color: "#92400e" }}>
                                 ℹ️ {tt.rejectNote}
                             </div>
-
-                            {/* Reason */}
                             <div style={{ marginBottom: 20 }}>
                                 <label style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#374151", marginBottom: 8 }}>
                                     {tt.rejectReasonLbl} <span style={{ color: "#ef4444" }}>*</span>
@@ -434,15 +424,11 @@ function ReviewRequestPage() {
                                 />
                                 {rejectErr && <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{rejectErr}</div>}
                             </div>
-
-                            {/* Buttons */}
                             <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-                                <button onClick={() => setShowRejectModal(false)}
-                                    style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "11px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer", color: "#555" }}>
+                                <button onClick={() => setShowRejectModal(false)} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "11px 22px", fontWeight: 600, fontSize: 14, cursor: "pointer", color: "#555" }}>
                                     {tt.cancelBtn}
                                 </button>
-                                <button onClick={handleReject} disabled={rejecting}
-                                    style={{ background: rejecting ? "#9ca3af" : "#dc2626", border: "none", borderRadius: 8, padding: "11px 26px", fontWeight: 700, fontSize: 14, cursor: rejecting ? "not-allowed" : "pointer", color: "#fff" }}>
+                                <button onClick={handleReject} disabled={rejecting} style={{ background: rejecting ? "#9ca3af" : "#dc2626", border: "none", borderRadius: 8, padding: "11px 26px", fontWeight: 700, fontSize: 14, cursor: rejecting ? "not-allowed" : "pointer", color: "#fff" }}>
                                     {rejecting ? tt.rejecting : tt.rejectConfirmBtn}
                                 </button>
                             </div>
@@ -451,54 +437,23 @@ function ReviewRequestPage() {
                 </div>
             )}
 
-            {/* ✅ Document Popup Modal — একই page-এ document দেখাবে */}
+            {/* Document Popup Modal */}
             {docModal && (
-                <div
-                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}
-                    onClick={e => e.target === e.currentTarget && setDocModal(null)}
-                >
+                <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 2000, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 20 }}
+                    onClick={e => e.target === e.currentTarget && setDocModal(null)}>
                     <div style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 860, maxHeight: "88vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 60px rgba(0,0,0,0.3)" }}>
-
-                        {/* Modal header */}
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 15, color: "#111" }}>{docModal.name}</div>
-                            <button
-                                onClick={() => setDocModal(null)}
-                                style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: "#374151" }}
-                            >
+                            <button onClick={() => setDocModal(null)} style={{ background: "#f3f4f6", border: "none", borderRadius: 8, padding: "7px 14px", fontWeight: 600, fontSize: 13, cursor: "pointer", color: "#374151" }}>
                                 {tt.closeModal}
                             </button>
                         </div>
-
-                        {/* Document viewer */}
                         <div style={{ flex: 1, overflow: "auto", background: "#f4f6f4", display: "flex", alignItems: "center", justifyContent: "center", minHeight: 400 }}>
                             {docModal.type?.includes("pdf") ? (
-                                <iframe
-                                    src={docModal.url}
-                                    title={docModal.name}
-                                    style={{ width: "100%", height: "70vh", border: "none" }}
-                                />
+                                <iframe src={docModal.url} title={docModal.name} style={{ width: "100%", height: "70vh", border: "none" }} />
                             ) : (
-                                <img
-                                    src={docModal.url}
-                                    alt={docModal.name}
-                                    style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: 8 }}
-                                    onError={e => {
-                                        e.target.style.display = "none";
-                                        e.target.nextSibling.style.display = "flex";
-                                    }}
-                                />
+                                <img src={docModal.url} alt={docModal.name} style={{ maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", borderRadius: 8 }} />
                             )}
-                            <div style={{ display: "none", flexDirection: "column", alignItems: "center", gap: 12, color: "#6b7280", padding: 40 }}>
-                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinejoin="round"/>
-                                    <polyline points="14 2 14 8 20 8"/>
-                                </svg>
-                                <div style={{ fontSize: 14 }}>ফাইল লোড করা যাচ্ছে না</div>
-                                <a href={docModal.url} target="_blank" rel="noopener noreferrer" style={{ color: "#15803d", fontSize: 13, fontWeight: 600 }}>
-                                    নতুন tab-এ খুলুন ↗
-                                </a>
-                            </div>
                         </div>
                     </div>
                 </div>
