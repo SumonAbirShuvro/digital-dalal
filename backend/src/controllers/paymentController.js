@@ -3,11 +3,12 @@ const paymentConfig = require('../config/payment');
 const db = require('../config/database');
 
 function generateInvoiceId() {
-    const timestamp = Date.now().toString(36).toUpperCase(); 
+    const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.random().toString(36).substring(2, 8).toUpperCase();
     return `INV-${timestamp}-${random}`;
 }
 
+//Initiate Payment 
 const initiatePayment = async (req, res) => {
     try {
         if (!paymentConfig.isConfigured()) {
@@ -24,7 +25,7 @@ const initiatePayment = async (req, res) => {
             customerMobile,
             customerEmail,
             userId,
-            appId       
+            appId
         } = req.body;
 
         if (!amount || !customerName || !customerMobile) {
@@ -71,8 +72,8 @@ const initiatePayment = async (req, res) => {
             }
         );
 
-        console.log('Status:', gatewayResponse.status);
-        console.log('Data:', JSON.stringify(gatewayResponse.data, null, 2));
+        console.log('Gateway Status:', gatewayResponse.status);
+        console.log('Gateway Data:', JSON.stringify(gatewayResponse.data, null, 2));
 
         if (gatewayResponse.data.status !== true || !gatewayResponse.data.payment_url) {
             return res.status(502).json({
@@ -84,8 +85,8 @@ const initiatePayment = async (req, res) => {
 
         await db.query(
             `INSERT INTO payments 
-                (app_id, invoice_id, user_id, amount, currency, service_name, 
-                 customer_name, customer_mobile, customer_email, 
+                (app_id, invoice_id, user_id, amount, currency, service_name,
+                 customer_name, customer_mobile, customer_email,
                  payment_status, gateway_response, created_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, NOW())`,
             [
@@ -118,8 +119,6 @@ const initiatePayment = async (req, res) => {
         if (error.response) {
             console.error('HTTP Status:', error.response.status);
             console.error('Response:', JSON.stringify(error.response.data, null, 2));
-            console.error('Request URL:', error.config?.url);
-            console.error('Request Body:', error.config?.data);
         }
         res.status(500).json({
             success: false,
@@ -128,6 +127,7 @@ const initiatePayment = async (req, res) => {
     }
 };
 
+// Verify Payment 
 const verifyPayment = async (req, res) => {
     try {
         const { invoice_id } = req.body;
@@ -153,6 +153,7 @@ const verifyPayment = async (req, res) => {
 
         const payment = payments[0];
 
+        // Already paid — return immediately
         if (payment.payment_status === 'paid') {
             return res.json({
                 success: true,
@@ -167,6 +168,7 @@ const verifyPayment = async (req, res) => {
             });
         }
 
+        // Call UddoktaPay verify API
         const gatewayResponse = await axios.post(
             `${paymentConfig.apiUrl}/api/verify-payment`,
             { invoice_id },
@@ -183,37 +185,50 @@ const verifyPayment = async (req, res) => {
         const verificationData = gatewayResponse.data;
         console.log('Verification response:', JSON.stringify(verificationData, null, 2));
 
-        if (
+        const isSuccess =
             verificationData.status === true ||
             verificationData.payment_status === 'Completed' ||
-            verificationData.payment_status === 'completed'
-        ) {
-           
+            verificationData.payment_status === 'completed';
+
+        if (isSuccess) {
+            // Extract transaction ID from gateway response
+            const txnId =
+                verificationData.transaction_id ||
+                verificationData.tran_id ||
+                verificationData.trxId ||
+                verificationData.invoice_id ||
+                invoice_id;
+
+          
             await db.query(
-                `UPDATE payments 
-                 SET payment_status = 'paid', 
-                     verified_at = NOW(), 
-                     gateway_response = ? 
+                `UPDATE payments
+                 SET payment_status = 'paid',
+                     transaction_id  = ?,
+                     paid_at         = NOW(),
+                     verified_at     = NOW(),
+                     gateway_response = ?
                  WHERE invoice_id = ?`,
-                [JSON.stringify(verificationData), invoice_id]
+                [txnId, JSON.stringify(verificationData), invoice_id]
             );
 
-             
+         
             if (payment.app_id) {
                 await db.query(
                     `UPDATE applications SET status = 'processing' WHERE app_id = ?`,
                     [payment.app_id]
                 );
+                console.log(`Application ${payment.app_id} status updated to processing`);
             }
 
-            // audit log
+            // Audit log
             await db.query(
-                `INSERT INTO audit_logs (user_id, action, details) 
+                `INSERT INTO audit_logs (user_id, action, details)
                  VALUES (?, 'payment_paid', ?)`,
                 [
                     payment.user_id,
                     JSON.stringify({
                         invoice_id,
+                        transaction_id: txnId,
                         amount: payment.amount,
                         timestamp: new Date()
                     })
@@ -229,14 +244,16 @@ const verifyPayment = async (req, res) => {
         res.json({
             success: true,
             data: {
-                invoiceId: updated[0].invoice_id,
-                status: updated[0].payment_status,
-                amount: updated[0].amount,
-                currency: updated[0].currency,
-                serviceName: updated[0].service_name,
-                createdAt: updated[0].created_at,
-                verifiedAt: updated[0].verified_at,
-                gatewayData: verificationData
+                invoiceId:    updated[0].invoice_id,
+                status:       updated[0].payment_status,
+                amount:       updated[0].amount,
+                currency:     updated[0].currency,
+                serviceName:  updated[0].service_name,
+                transactionId: updated[0].transaction_id,
+                createdAt:    updated[0].created_at,
+                paidAt:       updated[0].paid_at,
+                verifiedAt:   updated[0].verified_at,
+                gatewayData:  verificationData
             }
         });
 
@@ -249,19 +266,21 @@ const verifyPayment = async (req, res) => {
     }
 };
 
+// Webhook Handler
 const handleWebhook = async (req, res) => {
     try {
-        const headerApiKey = req.headers['rt-uddoktapay-api-key'] || req.headers['uddoktapay-api-key'];
+        const headerApiKey =
+            req.headers['rt-uddoktapay-api-key'] ||
+            req.headers['uddoktapay-api-key'];
 
         if (headerApiKey !== paymentConfig.apiKey) {
             return res.status(403).json({ success: false, error: 'Invalid API key' });
         }
 
         const webhookData = req.body;
-        console.log('Payment webhook received:', webhookData);
+        console.log('Webhook received:', JSON.stringify(webhookData, null, 2));
 
         const invoiceId = webhookData.invoice_id;
-
         if (!invoiceId) {
             return res.status(400).json({ success: false, error: 'Missing invoice ID' });
         }
@@ -278,7 +297,9 @@ const handleWebhook = async (req, res) => {
         const payment = payments[0];
 
         let newStatus = 'pending';
-        const statusRaw = (webhookData.status || webhookData.payment_status || '').toString().toLowerCase();
+        const statusRaw = (
+            webhookData.status || webhookData.payment_status || ''
+        ).toString().toLowerCase();
 
         if (['completed', 'paid', 'success', 'confirmed'].includes(statusRaw)) {
             newStatus = 'paid';
@@ -287,30 +308,42 @@ const handleWebhook = async (req, res) => {
         }
 
         if (payment.payment_status !== newStatus) {
+            // Extract transaction ID
+            const txnId =
+                webhookData.transaction_id ||
+                webhookData.tran_id ||
+                webhookData.trxId ||
+                invoiceId;
+
+           
             await db.query(
-                `UPDATE payments 
-                 SET payment_status = ?, 
-                     gateway_response = ?,
-                     verified_at = CASE WHEN ? = 'paid' THEN NOW() ELSE verified_at END
+                `UPDATE payments
+                 SET payment_status   = ?,
+                     transaction_id   = COALESCE(transaction_id, ?),
+                     paid_at          = CASE WHEN ? = 'paid' THEN NOW() ELSE paid_at END,
+                     verified_at      = CASE WHEN ? = 'paid' THEN NOW() ELSE verified_at END,
+                     gateway_response = ?
                  WHERE invoice_id = ?`,
-                [newStatus, JSON.stringify(webhookData), newStatus, invoiceId]
+                [newStatus, txnId, newStatus, newStatus, JSON.stringify(webhookData), invoiceId]
             );
 
-          
             if (newStatus === 'paid' && payment.app_id) {
                 await db.query(
                     `UPDATE applications SET status = 'processing' WHERE app_id = ?`,
                     [payment.app_id]
                 );
+                console.log(`[Webhook] Application ${payment.app_id} → processing`);
             }
 
+            // Audit log
             await db.query(
-                `INSERT INTO audit_logs (user_id, action, details) 
+                `INSERT INTO audit_logs (user_id, action, details)
                  VALUES (?, 'payment_webhook', ?)`,
                 [
                     payment.user_id,
                     JSON.stringify({
                         invoice_id: invoiceId,
+                        transaction_id: txnId,
                         amount: payment.amount,
                         status: newStatus,
                         raw_status: webhookData.status || webhookData.payment_status,
@@ -323,60 +356,53 @@ const handleWebhook = async (req, res) => {
         res.json({ success: true, message: 'Webhook received' });
 
     } catch (error) {
-        console.error('Payment webhook error:', error.message);
+        console.error('Webhook error:', error.message);
         res.status(500).json({ success: false, error: 'Webhook processing failed' });
     }
 };
 
+// Get Payment Status 
 const getPaymentStatus = async (req, res) => {
     try {
         const { invoiceId } = req.params;
 
         if (!invoiceId) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invoice ID is required.'
-            });
+            return res.status(400).json({ success: false, error: 'Invoice ID is required.' });
         }
 
         const [payments] = await db.query(
-            'SELECT invoice_id, amount, currency, service_name, payment_status, created_at, verified_at FROM payments WHERE invoice_id = ?',
+            `SELECT invoice_id, amount, currency, service_name,
+                    payment_status, transaction_id, created_at, paid_at, verified_at
+             FROM payments WHERE invoice_id = ?`,
             [invoiceId]
         );
 
         if (payments.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: 'Transaction not found.'
-            });
+            return res.status(404).json({ success: false, error: 'Transaction not found.' });
         }
 
-        res.json({
-            success: true,
-            data: payments[0]
-        });
+        res.json({ success: true, data: payments[0] });
 
     } catch (error) {
         console.error('Get payment status error:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch payment status.'
-        });
+        res.status(500).json({ success: false, error: 'Failed to fetch payment status.' });
     }
 };
 
+//Get Payment History
 const getPaymentHistory = async (req, res) => {
     try {
         const userId = req.user?.userId;
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
+        const page   = parseInt(req.query.page)  || 1;
+        const limit  = parseInt(req.query.limit) || 10;
         const offset = (page - 1) * limit;
 
         const [payments] = await db.query(
-            `SELECT invoice_id, amount, currency, service_name, payment_status, created_at, verified_at 
-             FROM payments 
-             WHERE user_id = ? 
-             ORDER BY created_at DESC 
+            `SELECT invoice_id, amount, currency, service_name,
+                    payment_status, transaction_id, created_at, paid_at, verified_at
+             FROM payments
+             WHERE user_id = ?
+             ORDER BY created_at DESC
              LIMIT ? OFFSET ?`,
             [userId, limit, offset]
         );
@@ -401,10 +427,7 @@ const getPaymentHistory = async (req, res) => {
 
     } catch (error) {
         console.error('Payment history error:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Failed to fetch payment history.'
-        });
+        res.status(500).json({ success: false, error: 'Failed to fetch payment history.' });
     }
 };
 
